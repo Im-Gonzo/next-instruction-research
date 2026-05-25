@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>architect / builder kernel — experiment visualization</title>
+<meta name="description" content="Visual walkthrough of the architect/builder kernel-vs-NL token experiments: tower grids, fidelity overlay, amortization crossover, regularity ladder."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500;1,6..72,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+/* ── design tokens (memo surface — identical to parent page) ───────── */
+:root{
+  --memo-bg:#FAF8F5; --memo-bg-deep:#F3EFE7; --memo-surface:#F0EDE8; --memo-card:#FFFFFF;
+  --memo-border:#D4CFC7; --memo-rule:#E6E0D5; --memo-text:#2C2825; --memo-ink:#141413;
+  --memo-muted:#8A837A; --memo-faint:#B7B0A4;
+  --memo-accent:#B8602A; --memo-accent-d:#8F4419; --memo-olive:#788C5D; --memo-sky:#6A8CAF;
+  --memo-red:#C04A3E; --memo-amber:#C49B4A;
+  --memo-shadow-1:0 1px 0 rgba(20,20,19,.03),0 8px 24px rgba(20,20,19,.04);
+  --memo-shadow-2:0 1px 0 rgba(20,20,19,.04),0 12px 32px rgba(20,20,19,.06);
+  --face-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --face-serif:"Newsreader","Iowan Old Style",Georgia,"Times New Roman",serif;
+  --radius-card:10px; --radius-chip:999px;
+  --ease:cubic-bezier(.4,0,.2,1); --motion:150ms;
+}
+:root[data-theme="dark"]{
+  --memo-bg:#141413; --memo-bg-deep:#1A1614; --memo-surface:#1F1A14; --memo-card:#1A1614;
+  --memo-border:#3A342D; --memo-rule:#2D2823; --memo-text:#E6E0D5; --memo-ink:#FAF8F5;
+  --memo-muted:#B7B0A4; --memo-faint:#8A837A;
+  --memo-accent:#D4793C; --memo-accent-d:#B8602A; --memo-olive:#9BB37A; --memo-sky:#8AAECF;
+  --memo-red:#E07A6A; --memo-amber:#D4B670;
+  --memo-shadow-1:0 1px 0 rgba(0,0,0,.40),0 8px 24px rgba(0,0,0,.30);
+  --memo-shadow-2:0 1px 0 rgba(0,0,0,.50),0 12px 32px rgba(0,0,0,.40);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--memo-bg);color:var(--memo-text);
+  transition:background-color var(--motion) var(--ease),color var(--motion) var(--ease);}
+body{font:400 13px/1.55 var(--face-mono);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+::selection{background:var(--memo-accent);color:#fff;}
+
+/* ── theme toggle ──────────────────────────────────────────────────── */
+.toggle-float{position:fixed;top:18px;right:18px;z-index:30;
+  display:inline-flex;align-items:center;background:color-mix(in srgb,var(--memo-bg) 80%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--memo-border);border-radius:999px;padding:3px;box-shadow:var(--memo-shadow-1);}
+.toggle-float button{background:transparent;border:0;padding:5px 11px;font:600 9.5px/1 var(--face-mono);
+  text-transform:uppercase;letter-spacing:.12em;color:var(--memo-muted);cursor:pointer;border-radius:999px;
+  transition:background var(--motion) var(--ease),color var(--motion) var(--ease);}
+.toggle-float button:hover{color:var(--memo-text);}
+.toggle-float button.on{background:var(--memo-ink);color:var(--memo-bg);}
+
+/* ── page layout ───────────────────────────────────────────────────── */
+.page{max-width:1100px;margin:0 auto;padding:0 56px 96px;}
+
+/* ── hero ──────────────────────────────────────────────────────────── */
+.hero{padding:100px 0 44px;}
+.hero .eyebrow{font:600 11px/1 var(--face-mono);color:var(--memo-accent);text-transform:uppercase;letter-spacing:.18em;margin:0 0 22px;}
+.hero h1{font:700 clamp(36px,5.5vw,72px)/1.05 var(--face-serif);color:var(--memo-ink);letter-spacing:-.018em;max-width:860px;margin:0 0 24px;}
+.hero h1 em{font-style:italic;color:var(--memo-accent);font-weight:600;}
+.lede{max-width:680px;font:400 15px/1.68 var(--face-mono);color:var(--memo-text);margin:0 0 12px;}
+.lede em{color:var(--memo-accent);font-style:italic;}
+.heroMeta{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:var(--radius-chip);
+  border:1px solid var(--memo-border);background:var(--memo-bg);font:500 11px/1 var(--face-mono);
+  color:var(--memo-muted);text-transform:uppercase;letter-spacing:.08em;}
+.pill b{color:var(--memo-ink);font-weight:600;letter-spacing:0;text-transform:none;}
+
+/* ── section headers ───────────────────────────────────────────────── */
+.section{padding:40px 0;border-top:1px solid var(--memo-rule);}
+.sec-no{font:500 13px/1 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;}
+.sec-no .accent{color:var(--memo-accent);}
+.sec-no .ttl{color:var(--memo-ink);margin-left:4px;font-weight:600;}
+.sec-lede{font:400 italic 17px/1.5 var(--face-serif);color:var(--memo-text);max-width:720px;margin:0 0 24px;}
+.sec-lede em{color:var(--memo-accent);}
+.prose{max-width:680px;}
+.prose p{font:400 14px/1.68 var(--face-mono);color:var(--memo-text);margin:0 0 14px;}
+.prose p:last-child{margin-bottom:0;}
+.prose b{color:var(--memo-ink);font-weight:600;}
+.prose em{color:var(--memo-accent);font-style:italic;}
+
+/* ── cards ─────────────────────────────────────────────────────────── */
+.card{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:var(--radius-card);
+  box-shadow:var(--memo-shadow-1);padding:18px 20px;}
+.card .cap{font:500 10px/1.4 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;}
+.card .cap b{color:var(--memo-ink);font-weight:600;}
+
+/* ── tower grids ────────────────────────────────────────────────────── */
+.grid-row{display:flex;flex-wrap:wrap;gap:24px;margin-top:24px;align-items:flex-end;}
+.tower-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.tower-label{font:600 11px/1 var(--face-mono);color:var(--memo-ink);text-transform:uppercase;letter-spacing:.1em;}
+.tower-sub{font:400 10px/1.4 var(--face-mono);color:var(--memo-muted);text-align:center;max-width:160px;}
+.tok-badge{display:inline-flex;gap:6px;font:500 10px/1 var(--face-mono);color:var(--memo-muted);}
+.tok-badge .nl{color:var(--memo-sky);}
+.tok-badge .k{color:var(--memo-accent);}
+
+/* ── fidelity overlay section ──────────────────────────────────────── */
+.overlay-controls{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0;}
+.ctrl-btn{padding:5px 13px;border-radius:var(--radius-chip);border:1px solid var(--memo-border);
+  background:var(--memo-bg);font:500 11px/1 var(--face-mono);color:var(--memo-muted);
+  cursor:pointer;text-transform:uppercase;letter-spacing:.08em;
+  transition:all var(--motion) var(--ease);}
+.ctrl-btn.active{background:var(--memo-ink);border-color:var(--memo-ink);color:var(--memo-bg);}
+.ctrl-btn:hover:not(.active){color:var(--memo-text);}
+.overlay-panels{display:flex;gap:24px;flex-wrap:wrap;margin-top:16px;align-items:flex-start;}
+.overlay-panel{flex:1;min-width:280px;}
+.overlay-title{font:600 11px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+.overlay-title.nl{color:var(--memo-sky);}
+.overlay-title.kern{color:var(--memo-olive);}
+.fidelity-stat{margin-top:10px;font:500 12px/1.6 var(--face-mono);color:var(--memo-text);}
+.fidelity-stat .ok{color:var(--memo-olive);font-weight:700;}
+.fidelity-stat .bad{color:var(--memo-red);font-weight:700;}
+.iou-bar-wrap{margin-top:8px;}
+.iou-bar-bg{height:8px;border-radius:4px;background:var(--memo-rule);overflow:hidden;width:100%;max-width:200px;}
+.iou-bar-fill{height:100%;border-radius:4px;transition:width .4s var(--ease);}
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font:400 11px/1 var(--face-mono);color:var(--memo-muted);}
+.legend-row .item{display:flex;align-items:center;gap:6px;}
+.swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;}
+
+/* ── chart containers ──────────────────────────────────────────────── */
+.chart-wrap{margin-top:20px;}
+.chart-wrap svg{display:block;width:100%;height:auto;}
+.note{font:400 italic 13px/1.6 var(--face-serif);color:var(--memo-muted);max-width:680px;margin-top:14px;}
+.note em{color:var(--memo-accent);}
+
+/* ── responsive ─────────────────────────────────────────────────────── */
+@media(max-width:880px){
+  .page{padding-left:20px;padding-right:20px;}
+  .hero{padding-top:72px;}
+  .overlay-panels{flex-direction:column;}
+}
+/* ── print / PDF ────────────────────────────────────────────────────── */
+@media print{
+  .toggle-float{display:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="toggle-float" id="tt">
+  <button data-t="light" class="on">light</button>
+  <button data-t="dark">dark</button>
+</div>
+
+<div class="page">
+
+  <section class="hero">
+    <p class="eyebrow">architect / builder kernel · experiment visualization · 2026-05-25</p>
+    <h1>Does the kernel stay exact when <em>prose breaks</em>?</h1>
+    <p class="lede">Two experiments comparing how an architect describes a 2D block tower to a builder: in <em>natural language</em> versus a shared <em>kernel</em> of named shapes. Tokens via tiktoken o200k_base. The key finding: on an irregular tower, natural language broke (IoU 0.862, missed + invented cells); the kernel stayed exact.</p>
+    <div class="heroMeta">
+      <span class="pill">exp 1 <b>two towers, amortization</b></span>
+      <span class="pill">exp 2 <b>regularity ladder L1→L3</b></span>
+      <span class="pill">model <b>Sonnet architect · Haiku builder</b></span>
+      <span class="pill">tokens <b>tiktoken o200k_base</b></span>
+    </div>
+  </section>
+
+  <!-- ── SECTION 1: Tower grids ─────────────────────────────────── -->
+  <section class="section" id="grids">
+    <div class="sec-no"><span class="accent">01</span> / <span class="ttl">TOWER GRIDS — GROUND TRUTH</span></div>
+    <p class="sec-lede">Every tower drawn at scale. Cells are [col, row], col 0 at left, row 0 at bottom. Kernel spec and NL / kernel token counts below each.</p>
+
+    <div style="margin-top:6px;">
+      <div class="card" style="margin-bottom:18px;">
+        <div class="cap">experiment 1 · <b>towers A and B</b> — both builders reconstructed exactly from either register</div>
+        <div class="grid-row" id="exp1-grids"></div>
+      </div>
+      <div class="card">
+        <div class="cap">experiment 2 · <b>L1 (regular) → L2 (semi) → L3 (irregular)</b> — the regularity axis</div>
+        <div class="grid-row" id="exp2-grids"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 2: Fidelity overlay ───────────────────────────── -->
+  <section class="section" id="fidelity">
+    <div class="sec-no"><span class="accent">02</span> / <span class="ttl">FIDELITY OVERLAY — THE CENTERPIECE</span></div>
+    <p class="sec-lede">Toggle level and condition. <em>L3 is where it breaks</em>: the NL builder missed one cell and invented three; the kernel reconstruction was exact at every level.</p>
+
+    <div class="overlay-controls">
+      <span style="font:500 10px/1 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.1em;align-self:center;">Level:</span>
+      <button class="ctrl-btn" data-level="L1">L1 regular</button>
+      <button class="ctrl-btn" data-level="L2">L2 semi</button>
+      <button class="ctrl-btn active" data-level="L3">L3 irregular</button>
+    </div>
+
+    <div class="overlay-panels" id="overlay-panels">
+      <!-- rendered by JS -->
+    </div>
+
+    <div class="legend-row" id="overlay-legend"></div>
+  </section>
+
+  <!-- ── SECTION 3: Amortization chart ─────────────────────────── -->
+  <section class="section" id="amort">
+    <div class="sec-no"><span class="accent">03</span> / <span class="ttl">AMORTIZATION — CUMULATIVE TOKEN COST</span></div>
+    <p class="sec-lede">The kernel definition costs 216 tokens once. After that, each tower description is ~22 tokens vs ~194.5 for natural language. Break-even at 1.25 towers.</p>
+    <div class="card chart-wrap" id="crossover-chart"></div>
+    <p class="note">Per tower the message shrinks <em>~9x</em> (194.5 -> 22 tokens). By 20 towers the kernel is <em>5.9x</em> cheaper. Both builders reconstructed every tower exactly — the compression was lossless.</p>
+  </section>
+
+  <!-- ── SECTION 4: Regularity ladder ──────────────────────────── -->
+  <section class="section" id="ladder-sec">
+    <div class="sec-no"><span class="accent">04</span> / <span class="ttl">REGULARITY LADDER — TOKENS vs FIDELITY</span></div>
+    <p class="sec-lede">As towers get less compressible, the kernel's token advantage narrows (8.2x -> 1.8x). But the kernel stayed exact at every level while concise NL prose broke on the irregular tower.</p>
+    <div class="card chart-wrap" id="ladder-chart"></div>
+    <p class="note">The kernel is the only register that is both <em>brief and exact</em> under compression pressure. Kernel fidelity: ✓ ✓ ✓. NL (concise prose) fidelity: ✓ ✓ ✗.</p>
+  </section>
+
+</div><!-- .page -->
+
+<script>
+/* ── inlined data (baked from viz_data.json) ───────────────────────── */
+const DATA = {"_note":"verified ground truth + builder reconstructions for the architect/builder kernel-vs-NL experiments. tokens via tiktoken o200k_base.","exp1":{"amortization":{"mean_nl":194.5,"mean_kernel":22.0,"kernel_def_tokens":216,"breakeven_towers":1.25,"totals_by_N":{"1":{"nl":194,"kernel":238},"2":{"nl":389,"kernel":260},"3":{"nl":584,"kernel":282},"5":{"nl":972,"kernel":326},"10":{"nl":1945,"kernel":436},"20":{"nl":3890,"kernel":656}}},"towers":{"A":{"label":"stack(C,Pi,L)","cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[1,0],[1,2],[1,5],[1,6],[2,0],[2,2],[2,3],[2,4],[2,5],[2,6]],"kernel_spec":"C(0,0)\nPi(0,3)\nL(0,6)","kernel_tok":18,"nl_tok":176,"builder_nl":{"cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[1,0],[1,2],[1,5],[1,6],[2,0],[2,2],[2,3],[2,4],[2,5],[2,6]],"missing":[],"extra":[],"exact":true,"iou":1.0},"builder_kernel":{"cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[1,0],[1,2],[1,5],[1,6],[2,0],[2,2],[2,3],[2,4],[2,5],[2,6]],"missing":[],"extra":[],"exact":true,"iou":1.0}},"B":{"label":"stack(C,C,Pi)+cap","cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[0,9],[1,0],[1,2],[1,3],[1,5],[1,8],[1,9],[2,0],[2,2],[2,3],[2,5],[2,6],[2,7],[2,8],[2,9]],"kernel_spec":"C(0,0)\nC(0,3)\nPi(0,6)\nrow(0,9,3)","kernel_tok":26,"nl_tok":213}}},"exp2":{"levels":{"L1":{"label":"regular","cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,2],[1,5],[2,0],[2,2],[2,3],[2,4],[2,5]],"kernel_spec":"C(0,0)\nPi(0,3)","kernel_tok":12,"exh_nl_tok":99,"desc_nl_tok":72,"builder_desc_nl":{"cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,2],[1,5],[2,0],[2,2],[2,3],[2,4],[2,5]],"missing":[],"extra":[],"exact":true,"iou":1.0},"kernel_exact":true},"L2":{"label":"semi (spur)","cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[1,0],[1,2],[1,5],[1,6],[2,0],[2,2],[2,3],[2,4],[2,5],[2,6],[4,3],[4,4],[4,5]],"kernel_spec":"C(0,0)\nPi(0,3)\nL(0,6)\ncol(4,3,3)","kernel_tok":26,"exh_nl_tok":141,"desc_nl_tok":220,"builder_desc_nl":{"cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[1,0],[1,2],[1,5],[1,6],[2,0],[2,2],[2,3],[2,4],[2,5],[2,6],[4,3],[4,4],[4,5]],"missing":[],"extra":[],"exact":true,"iou":1.0},"kernel_exact":true},"L3":{"label":"irregular (scatter)","cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,2],[1,5],[1,7],[2,0],[2,2],[2,3],[2,4],[2,5],[2,7],[3,5],[3,8],[4,1],[4,4],[4,7],[4,9],[5,0],[5,2],[5,5],[5,8]],"kernel_spec":"C(0,0)\nPi(0,3)\nblock(4,1) block(5,2) block(4,4) block(5,5) block(3,5) block(4,7) block(5,8) block(2,7) block(3,8) block(1,7) block(5,0) block(4,9)","kernel_tok":84,"exh_nl_tok":153,"desc_nl_tok":159,"builder_desc_nl":{"cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,2],[1,5],[1,7],[2,0],[2,1],[2,2],[2,3],[2,5],[2,7],[3,5],[3,8],[4,1],[4,4],[4,5],[4,7],[4,8],[4,9],[5,0],[5,2],[5,5],[5,8]],"missing":[[2,4]],"extra":[[2,1],[4,5],[4,8]],"exact":false,"iou":0.862},"builder_kernel":{"cells":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,2],[1,5],[1,7],[2,0],[2,2],[2,3],[2,4],[2,5],[2,7],[3,5],[3,8],[4,1],[4,4],[4,7],[4,9],[5,0],[5,2],[5,5],[5,8]],"missing":[],"extra":[],"exact":true,"iou":1.0},"kernel_exact":true}}},"kernel_macros":"C(x,y)=col(x,y,3)+row(x,y,3)+(x+1,y+2)+(x+2,y+2) [C open right]; Pi(x,y)=col(x,y,3)+col(x+2,y,3)+(x+1,y+2) [Pi open bottom]; L(x,y)=col(x,y,3)+(x+1,y)+(x+2,y); row/col/block primitives."};
+
+/* ── palette helper (reads CSS vars so it tracks theme) ────────────── */
+function palette() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue(n).trim();
+  return {
+    accent: g('--memo-accent'), ink: g('--memo-ink'), text: g('--memo-text'),
+    muted: g('--memo-muted'), faint: g('--memo-faint'), border: g('--memo-border'),
+    rule: g('--memo-rule'), card: g('--memo-card'), bg: g('--memo-bg'),
+    bgDeep: g('--memo-bg-deep'), olive: g('--memo-olive'), sky: g('--memo-sky'),
+    red: g('--memo-red'), amber: g('--memo-amber'), mono: g('--face-mono'),
+    serif: g('--face-serif')
+  };
+}
+
+/* ── tower SVG renderer ─────────────────────────────────────────────── */
+function drawTower(cells, opts) {
+  opts = opts || {};
+  const CELL = opts.cell || 18;
+  const PAD = opts.pad || 3;
+
+  if (!cells || cells.length === 0) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '60');
+    svg.setAttribute('height', '20');
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.textContent = '—';
+    t.setAttribute('x', '4');
+    t.setAttribute('y', '14');
+    t.setAttribute('font-size', '12');
+    t.setAttribute('fill', 'var(--memo-faint)');
+    svg.appendChild(t);
+    return svg;
+  }
+
+  const maxCol = Math.max(...cells.map(c => c[0]));
+  const maxRow = Math.max(...cells.map(c => c[1]));
+  const cols = maxCol + 1;
+  const rows = maxRow + 1;
+  const W = cols * (CELL + 1) + PAD * 2;
+  const H = rows * (CELL + 1) + PAD * 2;
+
+  const P = palette();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.style.display = 'block';
+
+  // grid lines
+  for (let c = 0; c <= cols; c++) {
+    const x = PAD + c * (CELL + 1);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x); line.setAttribute('x2', x);
+    line.setAttribute('y1', PAD); line.setAttribute('y2', H - PAD);
+    line.setAttribute('stroke', P.rule); line.setAttribute('stroke-width', '0.5');
+    svg.appendChild(line);
+  }
+  for (let r = 0; r <= rows; r++) {
+    const y = PAD + r * (CELL + 1);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', PAD); line.setAttribute('x2', W - PAD);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke', P.rule); line.setAttribute('stroke-width', '0.5');
+    svg.appendChild(line);
+  }
+
+  const cellSet = new Set(cells.map(c => c[0] + ',' + c[1]));
+  const missing = new Set((opts.missing || []).map(c => c[0] + ',' + c[1]));
+  const extra = new Set((opts.extra || []).map(c => c[0] + ',' + c[1]));
+
+  // draw cells
+  cells.forEach(function(cell) {
+    const col = cell[0];
+    const row = cell[1];
+    const x = PAD + col * (CELL + 1) + 0.5;
+    // flip: row 0 at bottom
+    const y = PAD + (rows - 1 - row) * (CELL + 1) + 0.5;
+    const key = col + ',' + row;
+
+    let fill = opts.fillColor || P.accent;
+    let stroke = 'none';
+    let opacity = 1;
+
+    if (opts.mode === 'nl') {
+      // NL builder result: show correct / extra
+      if (extra.has(key)) {
+        // invented cell — red with hatch
+        fill = P.red;
+        opacity = 0.7;
+      } else {
+        fill = opts.fillColor || P.olive;
+        opacity = 0.85;
+      }
+    } else if (opts.mode === 'kernel') {
+      fill = P.olive;
+      opacity = 0.85;
+    }
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', x); rect.setAttribute('y', y);
+    rect.setAttribute('width', CELL); rect.setAttribute('height', CELL);
+    rect.setAttribute('rx', '2');
+    rect.setAttribute('fill', fill);
+    rect.setAttribute('opacity', opacity);
+    if (stroke !== 'none') { rect.setAttribute('stroke', stroke); rect.setAttribute('stroke-width', '1.5'); }
+    svg.appendChild(rect);
+
+    if (opts.mode === 'nl' && extra.has(key)) {
+      // ✗ label on extra cells
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.textContent = '✗';
+      t.setAttribute('x', x + CELL / 2); t.setAttribute('y', y + CELL / 2 + 4);
+      t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '11');
+      t.setAttribute('font-weight', '700'); t.setAttribute('fill', '#fff');
+      t.setAttribute('font-family', 'var(--face-mono)');
+      svg.appendChild(t);
+    }
+
+    if (opts.mode === 'kernel') {
+      // ✓ on correct kernel cells
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.textContent = '✓';
+      t.setAttribute('x', x + CELL / 2); t.setAttribute('y', y + CELL / 2 + 4);
+      t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '9');
+      t.setAttribute('font-weight', '700'); t.setAttribute('fill', 'rgba(255,255,255,0.8)');
+      t.setAttribute('font-family', 'var(--face-mono)');
+      svg.appendChild(t);
+    }
+  });
+
+  // draw missing cells (ghost outlines)
+  if (opts.mode === 'nl') {
+    missing.forEach(function(key) {
+      const parts = key.split(',');
+      const col = parseInt(parts[0]);
+      const row = parseInt(parts[1]);
+      const x = PAD + col * (CELL + 1) + 0.5;
+      const y = PAD + (rows - 1 - row) * (CELL + 1) + 0.5;
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y);
+      rect.setAttribute('width', CELL); rect.setAttribute('height', CELL);
+      rect.setAttribute('rx', '2');
+      rect.setAttribute('fill', 'none');
+      rect.setAttribute('stroke', P.red);
+      rect.setAttribute('stroke-width', '1.5');
+      rect.setAttribute('stroke-dasharray', '3 2');
+      svg.appendChild(rect);
+    });
+  }
+
+  return svg;
+}
+
+/* ── simple tower (no fidelity overlay) ───────────────────────────── */
+function makeTowerWrap(label, sublabel, cells, kernelSpec, nlTok, kernelTok, opts) {
+  const wrap = document.createElement('div');
+  wrap.className = 'tower-wrap';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'tower-label';
+  lbl.textContent = label;
+  wrap.appendChild(lbl);
+
+  if (sublabel) {
+    const sub = document.createElement('div');
+    sub.className = 'tower-sub';
+    sub.textContent = sublabel;
+    wrap.appendChild(sub);
+  }
+
+  const svgEl = drawTower(cells, opts);
+  wrap.appendChild(svgEl);
+
+  const toks = document.createElement('div');
+  toks.className = 'tok-badge';
+  if (nlTok != null) {
+    const nlSpan = document.createElement('span');
+    nlSpan.className = 'nl';
+    nlSpan.textContent = 'NL ' + nlTok;
+    toks.appendChild(nlSpan);
+  }
+  if (kernelTok != null) {
+    const kSpan = document.createElement('span');
+    kSpan.className = 'k';
+    kSpan.textContent = 'K ' + kernelTok;
+    toks.appendChild(kSpan);
+  }
+  wrap.appendChild(toks);
+
+  if (kernelSpec) {
+    const spec = document.createElement('div');
+    spec.style.cssText = 'font:400 10px/1.45 var(--face-mono);color:var(--memo-muted);white-space:pre;text-align:center;margin-top:2px;';
+    spec.textContent = kernelSpec;
+    wrap.appendChild(spec);
+  }
+
+  return wrap;
+}
+
+/* ── render exp1 grids ─────────────────────────────────────────────── */
+function renderExp1Grids() {
+  const container = document.getElementById('exp1-grids');
+  container.innerHTML = '';
+  const towers = DATA.exp1.towers;
+  ['A', 'B'].forEach(function(key) {
+    const t = towers[key];
+    container.appendChild(
+      makeTowerWrap('Tower ' + key, t.label, t.cells, t.kernel_spec, t.nl_tok, t.kernel_tok, { cell: 18 })
+    );
+  });
+}
+
+/* ── render exp2 grids ─────────────────────────────────────────────── */
+function renderExp2Grids() {
+  const container = document.getElementById('exp2-grids');
+  container.innerHTML = '';
+  const levels = DATA.exp2.levels;
+  ['L1', 'L2', 'L3'].forEach(function(key) {
+    const lv = levels[key];
+    const nlTok = lv.desc_nl_tok != null ? lv.desc_nl_tok : lv.exh_nl_tok;
+    container.appendChild(
+      makeTowerWrap(key, lv.label, lv.cells, lv.kernel_spec, nlTok, lv.kernel_tok, { cell: 16 })
+    );
+  });
+}
+
+/* ── fidelity overlay ──────────────────────────────────────────────── */
+var activeLevel = 'L3';
+
+function renderOverlay() {
+  const P = palette();
+  const panelsEl = document.getElementById('overlay-panels');
+  panelsEl.innerHTML = '';
+  const legendEl = document.getElementById('overlay-legend');
+  legendEl.innerHTML = '';
+
+  const lv = DATA.exp2.levels[activeLevel];
+  if (!lv) return;
+
+  const groundTruth = lv.cells;
+  const nlResult = lv.builder_desc_nl;
+  const kernResult = lv.builder_kernel || { cells: lv.cells, missing: [], extra: [], exact: true, iou: 1.0 };
+
+  // Derive allCells for NL panel (ground truth + extras)
+  const gtSet = new Set(groundTruth.map(c => c[0] + ',' + c[1]));
+  const nlAllCells = nlResult.cells.slice(); // already includes extras
+
+  // --- NL panel ---
+  const nlPanel = document.createElement('div');
+  nlPanel.className = 'overlay-panel';
+
+  const nlTitle = document.createElement('div');
+  nlTitle.className = 'overlay-title nl';
+  nlTitle.textContent = 'Natural language reconstruction';
+  nlPanel.appendChild(nlTitle);
+
+  const nlSvg = drawTower(nlAllCells, {
+    cell: 20,
+    mode: 'nl',
+    missing: nlResult.missing,
+    extra: nlResult.extra
+  });
+  nlPanel.appendChild(nlSvg);
+
+  const nlStat = document.createElement('div');
+  nlStat.className = 'fidelity-stat';
+  if (nlResult.exact) {
+    nlStat.innerHTML = '<span class="ok">✓ exact</span> IoU 1.0';
+  } else {
+    const missCount = nlResult.missing.length;
+    const extraCount = nlResult.extra.length;
+    const iou = nlResult.iou.toFixed(3);
+    nlStat.innerHTML = '<span class="bad">✗ IoU ' + iou + '</span>' +
+      (missCount > 0 ? ' &nbsp;· missed ' + missCount + ' cell' + (missCount > 1 ? 's' : '') : '') +
+      (extraCount > 0 ? ' &nbsp;· invented ' + extraCount + ' cell' + (extraCount > 1 ? 's' : '') : '');
+  }
+  nlPanel.appendChild(nlStat);
+
+  if (!nlResult.exact) {
+    const iouBarWrap = document.createElement('div');
+    iouBarWrap.className = 'iou-bar-wrap';
+    iouBarWrap.innerHTML = '<div class="iou-bar-bg"><div class="iou-bar-fill" style="width:' + (nlResult.iou * 100).toFixed(1) + '%;background:var(--memo-red);"></div></div>' +
+      '<div style="font:400 10px/1 var(--face-mono);color:var(--memo-muted);margin-top:4px;">IoU ' + nlResult.iou.toFixed(3) + '</div>';
+    nlPanel.appendChild(iouBarWrap);
+  }
+
+  if (!nlResult.exact) {
+    const details = document.createElement('div');
+    details.style.cssText = 'font:400 11px/1.6 var(--face-mono);color:var(--memo-muted);margin-top:8px;';
+    const missStr = nlResult.missing.length > 0
+      ? '<span style="color:var(--memo-red)">missed: ' + nlResult.missing.map(c => '[' + c[0] + ',' + c[1] + ']').join(' ') + '</span>'
+      : '';
+    const extraStr = nlResult.extra.length > 0
+      ? '<span style="color:var(--memo-red)">invented: ' + nlResult.extra.map(c => '[' + c[0] + ',' + c[1] + ']').join(' ') + '</span>'
+      : '';
+    details.innerHTML = [missStr, extraStr].filter(Boolean).join('<br>');
+    nlPanel.appendChild(details);
+  }
+
+  panelsEl.appendChild(nlPanel);
+
+  // --- divider ---
+  const div = document.createElement('div');
+  div.style.cssText = 'width:1px;background:var(--memo-rule);align-self:stretch;margin:0 4px;';
+  panelsEl.appendChild(div);
+
+  // --- Kernel panel ---
+  const kPanel = document.createElement('div');
+  kPanel.className = 'overlay-panel';
+
+  const kTitle = document.createElement('div');
+  kTitle.className = 'overlay-title kern';
+  kTitle.textContent = 'Kernel reconstruction';
+  kPanel.appendChild(kTitle);
+
+  const kSvg = drawTower(kernResult.cells, {
+    cell: 20,
+    mode: 'kernel',
+    missing: kernResult.missing,
+    extra: kernResult.extra
+  });
+  kPanel.appendChild(kSvg);
+
+  const kStat = document.createElement('div');
+  kStat.className = 'fidelity-stat';
+  kStat.innerHTML = '<span class="ok">✓ exact</span> IoU 1.0 &nbsp;· ' + kernResult.cells.length + ' / ' + kernResult.cells.length + ' cells';
+  kPanel.appendChild(kStat);
+
+  const iouBarWrap2 = document.createElement('div');
+  iouBarWrap2.className = 'iou-bar-wrap';
+  iouBarWrap2.innerHTML = '<div class="iou-bar-bg"><div class="iou-bar-fill" style="width:100%;background:var(--memo-olive);"></div></div>' +
+    '<div style="font:400 10px/1 var(--face-mono);color:var(--memo-muted);margin-top:4px;">IoU 1.000</div>';
+  kPanel.appendChild(iouBarWrap2);
+
+  const kSpec = document.createElement('div');
+  kSpec.style.cssText = 'font:400 10.5px/1.55 var(--face-mono);color:var(--memo-muted);white-space:pre-wrap;margin-top:10px;max-width:260px;';
+  kSpec.textContent = lv.kernel_spec;
+  kPanel.appendChild(kSpec);
+
+  panelsEl.appendChild(kPanel);
+
+  // --- legend ---
+  const items = [
+    { color: P.olive, label: 'correct cell (kernel)' },
+    { color: P.olive, label: 'correct cell (NL)', opacity: 0.85 },
+    { color: P.red, label: 'invented / extra (NL)', opacity: 0.7 }
+  ];
+  if (!nlResult.exact && nlResult.missing.length > 0) {
+    items.push({ color: 'transparent', label: 'missing cell (dashed red outline)', border: P.red });
+  }
+  legendEl.innerHTML = items.map(function(item) {
+    const bg = item.opacity != null ? item.color : item.color;
+    const swatchStyle = item.border
+      ? 'background:transparent;border:1.5px dashed ' + item.border + ';'
+      : 'background:' + bg + ';opacity:' + (item.opacity != null ? item.opacity : 1) + ';';
+    return '<span class="item"><span class="swatch" style="' + swatchStyle + '"></span><span>' + item.label + '</span></span>';
+  }).join('');
+}
+
+/* ── D3 amortization crossover chart ───────────────────────────────── */
+function chartCrossover() {
+  const el = document.getElementById('crossover-chart');
+  if (!el) return;
+  el.innerHTML = '';
+
+  const P = palette();
+  const W = 680, H = 320, m = { t: 28, r: 140, b: 52, l: 68 };
+
+  const MEAN_NL = DATA.exp1.amortization.mean_nl;
+  const DEF = DATA.exp1.amortization.kernel_def_tokens;
+  const MEAN_K = DATA.exp1.amortization.mean_kernel;
+  const BE = DATA.exp1.amortization.breakeven_towers;
+  const Nmax = 20;
+
+  const x = d3.scaleLinear().domain([0, Nmax]).range([m.l, W - m.r]);
+  const y = d3.scaleLinear().domain([0, MEAN_NL * Nmax]).nice().range([H - m.b, m.t]);
+
+  const svg = d3.select(el).append('svg')
+    .attr('viewBox', '0 0 ' + W + ' ' + H)
+    .attr('width', '100%').style('height', 'auto').style('display', 'block');
+
+  // grid lines from y-axis
+  const gy = svg.append('g').attr('transform', 'translate(' + m.l + ',0)')
+    .call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(d3.format('~s')));
+  gy.selectAll('.domain').remove();
+  gy.selectAll('.tick line').attr('stroke', P.rule).attr('stroke-dasharray', '2 3');
+  gy.selectAll('.tick text').attr('fill', P.muted).attr('font-family', P.mono).attr('font-size', 10);
+
+  const gx = svg.append('g').attr('transform', 'translate(0,' + (H - m.b) + ')')
+    .call(d3.axisBottom(x).ticks(10).tickSizeOuter(0));
+  gx.selectAll('.domain').attr('stroke', P.border);
+  gx.selectAll('.tick line').attr('stroke', P.border);
+  gx.selectAll('.tick text').attr('fill', P.muted).attr('font-family', P.mono).attr('font-size', 10);
+
+  const line = d3.line().x(function(d) { return x(d[0]); }).y(function(d) { return y(d[1]); });
+
+  const nlPts = d3.range(0, Nmax + 0.1, 0.5).map(function(N) { return [N, MEAN_NL * N]; });
+  const kPts = d3.range(0, Nmax + 0.1, 0.5).map(function(N) { return [N, DEF + MEAN_K * N]; });
+
+  // area between lines (savings region)
+  const area = d3.area()
+    .x(function(d) { return x(d[0]); })
+    .y0(function(d) { return y(DEF + MEAN_K * d[0]); })
+    .y1(function(d) { return y(MEAN_NL * d[0]); });
+  const savingsPts = d3.range(BE, Nmax + 0.1, 0.5).map(function(N) { return [N]; });
+  svg.append('path').datum(savingsPts).attr('fill', P.olive).attr('fill-opacity', 0.08)
+    .attr('d', area);
+
+  svg.append('path').datum(nlPts).attr('fill', 'none').attr('stroke', P.sky).attr('stroke-width', 2.2).attr('d', line);
+  svg.append('path').datum(kPts).attr('fill', 'none').attr('stroke', P.accent).attr('stroke-width', 2.2).attr('d', line);
+
+  // break-even line
+  const Ybe = MEAN_NL * BE;
+  svg.append('line')
+    .attr('x1', x(BE)).attr('x2', x(BE)).attr('y1', y(Ybe)).attr('y2', H - m.b)
+    .attr('stroke', P.faint).attr('stroke-dasharray', '3 3').attr('stroke-width', 1.2);
+  svg.append('circle').attr('cx', x(BE)).attr('cy', y(Ybe)).attr('r', 4.5).attr('fill', P.ink);
+  svg.append('text').attr('x', x(BE) + 7).attr('y', y(Ybe) - 8)
+    .attr('font-size', 10.5).attr('font-weight', 700).attr('fill', P.ink)
+    .attr('font-family', P.mono).text('break-even ≈ 1.25 towers');
+
+  // kernel def annotation
+  svg.append('line').attr('x1', x(0)).attr('x2', x(1))
+    .attr('y1', y(DEF)).attr('y2', y(DEF))
+    .attr('stroke', P.muted).attr('stroke-dasharray', '2 2').attr('stroke-width', 1);
+  svg.append('text').attr('x', m.l + 4).attr('y', y(DEF) - 5)
+    .attr('font-size', 9.5).attr('fill', P.muted).attr('font-family', P.mono).text('kernel def · 216 tok');
+
+  // data points from totals_by_N
+  const totals = DATA.exp1.amortization.totals_by_N;
+  Object.keys(totals).forEach(function(nStr) {
+    const N = parseInt(nStr);
+    const t = totals[nStr];
+    [['nl', t.nl, P.sky], ['kernel', t.kernel, P.accent]].forEach(function(arr) {
+      const key = arr[0]; const val = arr[1]; const col = arr[2];
+      svg.append('circle').attr('cx', x(N)).attr('cy', y(val))
+        .attr('r', 3).attr('fill', col).attr('opacity', 0.9);
+    });
+  });
+
+  // end labels
+  const lastNL = nlPts[nlPts.length - 1];
+  const lastK = kPts[kPts.length - 1];
+  svg.append('text').attr('x', x(lastNL[0]) + 5).attr('y', y(lastNL[1]) + 4)
+    .attr('font-size', 11).attr('font-weight', 600).attr('fill', P.sky)
+    .attr('font-family', P.mono).text('natural language');
+  svg.append('text').attr('x', x(lastK[0]) + 5).attr('y', y(lastK[1]) + 4)
+    .attr('font-size', 11).attr('font-weight', 600).attr('fill', P.accent)
+    .attr('font-family', P.mono).text('kernel');
+
+  // axis labels
+  svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 8)
+    .attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', P.faint)
+    .attr('font-family', P.mono).text('towers built (N)');
+  svg.append('text').attr('transform', 'rotate(-90 14 ' + (m.t + H - m.b) / 2 + ')')
+    .attr('x', 14).attr('y', (m.t + H - m.b) / 2)
+    .attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', P.faint)
+    .attr('font-family', P.mono).text('cumulative tokens');
+}
+
+/* ── D3 regularity ladder chart ────────────────────────────────────── */
+function chartLadder() {
+  const el = document.getElementById('ladder-chart');
+  if (!el) return;
+  el.innerHTML = '';
+
+  const P = palette();
+  const W = 680, H = 340, m = { t: 52, r: 24, b: 64, l: 60 };
+
+  const levels = [
+    { key: 'L1', label: 'L1 regular', kn: DATA.exp2.levels.L1.kernel_tok, nl: DATA.exp2.levels.L1.desc_nl_tok, nlOk: DATA.exp2.levels.L1.builder_desc_nl.exact, kOk: DATA.exp2.levels.L1.kernel_exact },
+    { key: 'L2', label: 'L2 semi', kn: DATA.exp2.levels.L2.kernel_tok, nl: DATA.exp2.levels.L2.desc_nl_tok, nlOk: DATA.exp2.levels.L2.builder_desc_nl.exact, kOk: DATA.exp2.levels.L2.kernel_exact },
+    { key: 'L3', label: 'L3 irregular', kn: DATA.exp2.levels.L3.kernel_tok, nl: DATA.exp2.levels.L3.desc_nl_tok, nlOk: DATA.exp2.levels.L3.builder_desc_nl.exact, kOk: DATA.exp2.levels.L3.kernel_exact }
+  ];
+
+  const x0 = d3.scaleBand().domain(levels.map(function(d) { return d.label; }))
+    .range([m.l, W - m.r]).paddingInner(0.3).paddingOuter(0.15);
+  const x1 = d3.scaleBand().domain(['kernel', 'nl'])
+    .range([0, x0.bandwidth()]).padding(0.14);
+  const maxVal = d3.max(levels, function(d) { return Math.max(d.kn, d.nl); });
+  const y = d3.scaleLinear().domain([0, maxVal + 20]).nice().range([H - m.b, m.t]);
+
+  const svg = d3.select(el).append('svg')
+    .attr('viewBox', '0 0 ' + W + ' ' + H)
+    .attr('width', '100%').style('height', 'auto').style('display', 'block');
+
+  const gy = svg.append('g').attr('transform', 'translate(' + m.l + ',0)')
+    .call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)));
+  gy.selectAll('.domain').remove();
+  gy.selectAll('.tick line').attr('stroke', P.rule).attr('stroke-dasharray', '2 3');
+  gy.selectAll('.tick text').attr('fill', P.muted).attr('font-family', P.mono).attr('font-size', 10);
+
+  levels.forEach(function(lv) {
+    var barsData = [
+      { key: 'kernel', val: lv.kn, col: P.accent, ok: lv.kOk },
+      { key: 'nl', val: lv.nl, col: P.sky, ok: lv.nlOk }
+    ];
+
+    barsData.forEach(function(b) {
+      svg.append('rect')
+        .attr('x', x0(lv.label) + x1(b.key))
+        .attr('y', y(b.val))
+        .attr('width', x1.bandwidth())
+        .attr('height', (H - m.b) - y(b.val))
+        .attr('fill', b.col).attr('rx', 2).attr('opacity', 0.88);
+
+      svg.append('text')
+        .attr('x', x0(lv.label) + x1(b.key) + x1.bandwidth() / 2)
+        .attr('y', y(b.val) - 5)
+        .attr('text-anchor', 'middle').attr('font-size', 10.5).attr('font-weight', 700)
+        .attr('fill', b.col).attr('font-family', P.mono).text(b.val);
+    });
+
+    // fidelity marks — one for NL, one for kernel
+    var markY = m.t - 14;
+    var halfBw = x0.bandwidth() / 2;
+
+    // kernel fidelity (always exact)
+    svg.append('text')
+      .attr('x', x0(lv.label) + x1('kernel') + x1.bandwidth() / 2)
+      .attr('y', markY)
+      .attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 700)
+      .attr('fill', P.olive).attr('font-family', P.mono).text('✓');
+
+    // NL fidelity
+    svg.append('text')
+      .attr('x', x0(lv.label) + x1('nl') + x1.bandwidth() / 2)
+      .attr('y', markY)
+      .attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 700)
+      .attr('fill', lv.nlOk ? P.olive : P.red).attr('font-family', P.mono)
+      .text(lv.nlOk ? '✓' : '✗');
+
+    // ratio annotation
+    var ratio = (lv.nl / lv.kn).toFixed(1);
+    svg.append('text')
+      .attr('x', x0(lv.label) + halfBw)
+      .attr('y', m.t - 28)
+      .attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', P.muted)
+      .attr('font-family', P.mono).text(ratio + 'x cheaper');
+  });
+
+  const gx = svg.append('g').attr('transform', 'translate(0,' + (H - m.b) + ')')
+    .call(d3.axisBottom(x0).tickSizeOuter(0));
+  gx.selectAll('.domain').attr('stroke', P.border);
+  gx.selectAll('.tick line').attr('stroke', P.border);
+  gx.selectAll('.tick text').attr('fill', P.text).attr('font-family', P.mono).attr('font-size', 11).attr('dy', '1.2em');
+
+  // axis labels (x-axis title omitted — bar-group tick labels already identify the axis)
+  svg.append('text').attr('transform', 'rotate(-90 14 ' + (m.t + H - m.b) / 2 + ')')
+    .attr('x', 14).attr('y', (m.t + H - m.b) / 2)
+    .attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', P.faint)
+    .attr('font-family', P.mono).text('tokens (o200k)');
+
+  // legend
+  const lg = svg.append('g').attr('transform', 'translate(' + m.l + ',' + (H - 12) + ')');
+  var lx = 0;
+  [['kernel', P.accent], ['natural language (concise prose)', P.sky]].forEach(function(pair) {
+    lg.append('rect').attr('x', lx).attr('y', -9).attr('width', 11).attr('height', 11)
+      .attr('rx', 2).attr('fill', pair[1]);
+    lg.append('text').attr('x', lx + 16).attr('y', 0).attr('font-size', 10)
+      .attr('fill', P.muted).attr('font-family', P.mono).text(pair[0]);
+    lx += 16 + pair[0].length * 6.2 + 22;
+  });
+
+  // fidelity legend
+  svg.append('text').attr('x', m.l).attr('y', m.t - 38)
+    .attr('font-size', 9.5).attr('fill', P.muted).attr('font-family', P.mono)
+    .text('fidelity marks (above bars): K = kernel  NL = natural language');
+}
+
+/* ── render all ─────────────────────────────────────────────────────── */
+function renderAll() {
+  renderExp1Grids();
+  renderExp2Grids();
+  renderOverlay();
+  if (window.d3) {
+    chartCrossover();
+    chartLadder();
+  } else {
+    ['crossover-chart', 'ladder-chart'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<p style="font:12px var(--face-mono);color:var(--memo-muted);padding:16px;">charts need D3 (network) — data is in the text above</p>';
+    });
+  }
+}
+
+/* ── theme toggle ──────────────────────────────────────────────────── */
+(function() {
+  const root = document.documentElement;
+  const key = 'viz-theme';
+  const tt = document.getElementById('tt');
+
+  function setTheme(t) {
+    root.setAttribute('data-theme', t);
+    tt.querySelectorAll('button').forEach(function(b) {
+      b.classList.toggle('on', b.dataset.t === t);
+    });
+    localStorage.setItem(key, t);
+    renderAll();
+  }
+
+  const saved = localStorage.getItem(key);
+  if (saved) { setTheme(saved); } else { renderAll(); }
+
+  tt.addEventListener('click', function(e) {
+    const b = e.target.closest('button');
+    if (b) setTheme(b.dataset.t);
+  });
+})();
+
+/* ── overlay level controls ────────────────────────────────────────── */
+document.querySelectorAll('.ctrl-btn[data-level]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.ctrl-btn[data-level]').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    activeLevel = btn.dataset.level;
+    renderOverlay();
+  });
+});
+</script>
+</body>
+</html>

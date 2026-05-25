@@ -1,0 +1,21 @@
+A self-service edge / load-balancing platform.
+
+Developers request a load balancer through an Open Service Broker (a FastAPI service),
+which enqueues a provisioning task on SQS and records status in DynamoDB. A worker consumes
+the queue, writes results back to DynamoDB, and provisions Route 53 DNS and a CloudFront
+distribution.
+
+An Envoy control plane called Sovereign pulls service context from the broker and from an
+S3 bucket, builds context and templates, and renders them into Envoy xDS resources —
+clusters, routes, and listeners — which the Envoy proxy fleet fetches via xDS.
+
+On the data path, customer traffic enters through a network load balancer (NLB) and is
+forwarded by the Envoy fleet to backend services and to products such as Jira, Confluence,
+Bitbucket, and Status Page. Envoy delegates cross-cutting concerns to local sidecars:
+authentication (written in Rust), authorization, and rate limiting.
+
+The proxy fleet is provisioned by a CloudFormation template that defines parameters, a VPC
+with a subnet, an internet gateway, a security group, a key pair, an IAM role, an autoscaling
+group, the NLB, ACM, and Route 53. The autoscaling group scales EC2 instances and launches
+them from an AMI; those EC2 hosts run Envoy and the sidecars. The AMI is built by Packer,
+configured by SaltStack.

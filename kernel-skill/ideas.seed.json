@@ -1,0 +1,19 @@
+{
+  "root": "edge-platform",
+  "ideas": [
+    {"id": "osb",       "label": "Open Service Broker", "uses": ["async_broker"]},
+    {"id": "sovereign", "label": "Sovereign control plane", "uses": ["control_plane"]},
+    {"id": "cfn",       "label": "CloudFormation fleet", "uses": ["proxy_fleet", "image_pipeline"]},
+    {"id": "packer",    "label": "image pipeline", "uses": ["image_pipeline"]},
+    {"id": "edge",      "label": "Edge", "uses": ["edge_chain", "sidecar", "behind_edge"]}
+  ],
+  "lexicon": [
+    {"id": "async_broker",  "sig": "async_broker(api, queue, worker, db)", "does": "client → api → queue → worker → db provisioning loop; api also reads db for status"},
+    {"id": "control_plane", "sig": "control_plane(ctrl, proxy, store)", "does": "Envoy xDS plane — render context+templates into clusters/routes/listeners; the proxy pulls them"},
+    {"id": "proxy_fleet",   "sig": "proxy_fleet(cfn, ami, proxy)", "does": "CloudFormation provisions vpc/subnet/sg/asg/nlb/acm/route53; asg → ec2 runs the proxy from the ami"},
+    {"id": "image_pipeline","sig": "image_pipeline(cfgtool, builder)", "does": "config tool → builder → AMI baked for the fleet"},
+    {"id": "edge_chain",    "sig": "edge_chain(client, …hops…, svc)", "does": "forward a request through each hop to the service"},
+    {"id": "sidecar",       "sig": "sidecar(proxy, name, lang, owner)", "does": "attach a local sidecar (authn / authz / rate-limit) to the proxy"},
+    {"id": "behind_edge",   "sig": "behind_edge(proxy, [svcs])", "does": "route the edge to these backend products"}
+  ]
+}

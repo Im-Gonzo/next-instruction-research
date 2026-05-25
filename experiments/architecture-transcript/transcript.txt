@@ -1,0 +1,982 @@
+# I was laid off by Atlassian
+# https://www.youtube.com/watch/55pTFVoclvE
+
+00:00:00.240 I was recently affected by the layoffs
+00:00:03.600 made by Atlassian and I wanted to take
+00:00:06.400 some time out to reflect on the time
+00:00:09.040 that I spent working for Atlassian. I
+00:00:11.599 worked there for about 8 years. During
+00:00:14.160 that time, I built a lot of things and I
+00:00:16.560 wanted to talk about what I built,
+00:00:18.080 mainly the things that I personally
+00:00:19.920 found interesting or that I'm proud of.
+00:00:21.920 I hope that this video will be useful or
+00:00:24.720 helpful to someone who perhaps is or was
+00:00:28.400 in the same situation as me and maybe
+00:00:31.039 it'll give them some inspiration in
+00:00:32.880 terms of how they can tackle the same
+00:00:35.120 things that I did or something similar
+00:00:37.680 and perhaps avoid some of the mistakes
+00:00:39.520 that I've made. I also might talk about
+00:00:41.360 non-technical parts of my experience at
+00:00:44.000 Atassian, although most of it will be
+00:00:45.760 technical. And this video will be split
+00:00:48.160 into chapters so that you can skip to
+00:00:51.680 sections that are more interesting to
+00:00:54.239 you rather than rather than watching the
+00:00:56.239 video from start to finish. So I suppose
+00:00:58.559 to start with I'll talk about when I was
+00:01:00.559 first hired and even though I it was 8
+00:01:03.440 years ago I still remember the interview
+00:01:05.519 process which is different nowadays and
+00:01:08.640 the reason why I was hired or at least
+00:01:10.720 from my perspective the reason why I was
+00:01:12.479 hired and the things that I started
+00:01:14.240 working on during the start. So yeah,
+00:01:16.640 let's just start at the interview
+00:01:18.880 process. So I was interviewed by some
+00:01:21.759 people that I now consider friends and I
+00:01:24.479 remember having the impression while
+00:01:26.560 being interviewed that these individuals
+00:01:29.439 were quite intelligent and that was
+00:01:31.280 something that was exciting for me. The
+00:01:32.799 interview process consisted of a coding
+00:01:34.560 quiz on hacker rank which I aced with
+00:01:37.439 full marks. Then the first technical
+00:01:40.000 interview was with two interviewers and
+00:01:44.000 they gave me a white paper and asked me
+00:01:45.920 to read it while they sat out of the
+00:01:47.680 room for about 10 minutes. They came
+00:01:49.759 back in and then asked me questions
+00:01:52.000 about the white paper, asked me to
+00:01:53.680 basically articulate what was in the
+00:01:55.360 white paper and the white paper was
+00:01:57.439 actually about custom domains and the
+00:01:59.759 white paper was by Cloudflare. They then
+00:02:01.520 asked me a few questions about things
+00:02:03.840 like microservices and architectural
+00:02:06.640 things like that. um containers and and
+00:02:09.280 whatnot. And they were happy enough. I
+00:02:11.038 don't remember the rest, but they were
+00:02:12.400 happy enough with with me during that
+00:02:14.800 stage. So, I continued to the uh second
+00:02:17.680 technical interview, which was a
+00:02:18.959 troubleshooting exercise where I was
+00:02:21.440 asked to essentially prompt the
+00:02:23.760 interviewer for information in order to
+00:02:26.160 troubleshoot a a real incident that
+00:02:28.400 occurred in Alassia. And it was a it was
+00:02:30.560 an application problem that lead led to
+00:02:33.519 a denial of service. Uh so, that was
+00:02:36.080 fun. And then I think I was asked
+00:02:38.400 something about how um latency based DNS
+00:02:41.920 works and my answer was not accurate but
+00:02:45.840 perhaps acceptable. I I I thought about
+00:02:48.160 it from first principles and I thought
+00:02:49.920 that that uh for example I thought that
+00:02:52.400 route 53 did a triangulation based on
+00:02:55.040 the actual latency of the client. But it
+00:02:58.640 is more like that they use a uh they
+00:03:01.840 probably use a geoloccation database in
+00:03:04.480 order to do latency based routing of DNS
+00:03:07.599 requests of the DNS answers. Sorry. Then
+00:03:10.319 after that was a values uh interview and
+00:03:13.120 to be honest I don't really remember
+00:03:14.560 most of the questions for for the values
+00:03:17.040 portion but I do remember one thing
+00:03:20.239 which was when I asked the question of I
+00:03:23.840 asked I asked the interviewer to think
+00:03:25.599 about 12 months from now and to look
+00:03:28.000 back retrospectively what is the thing
+00:03:30.239 that I would have had to achieve in
+00:03:32.560 order to for for you to say it was a
+00:03:35.120 good decision hiring this person and
+00:03:36.640 then they told me about a an application
+00:03:40.159 that they needed to be built for the
+00:03:43.280 platform within Atlassian and the
+00:03:45.360 application would facilitate
+00:03:47.200 self-service load balancing sort of
+00:03:48.959 similar to if you were using Amazon
+00:03:52.080 application load balances or the
+00:03:54.239 equivalent in any cloud provider but for
+00:03:56.239 the internal developers of Allesia and
+00:03:59.280 it was essentially just a a framework
+00:04:01.680 that I personally was not familiar with
+00:04:03.599 and uh I said I could build it because I
+00:04:06.159 had confidence in building web apps with
+00:04:08.560 Python at that time and they accepted my
+00:04:11.920 level of confidence and decided to hire
+00:04:13.840 me. So that's the the interview portion
+00:04:15.920 completed. So I joined Atlassian and
+00:04:19.120 they have this classic saying or
+00:04:21.839 impression that when you join at Lassen
+00:04:24.560 that you are drinking from the fire hose
+00:04:27.280 because there's so much information that
+00:04:29.360 you have to absorb in the first few
+00:04:31.120 weeks and months in order to just sort
+00:04:33.919 of get going. My first my very first
+00:04:36.639 task at least the task that I gave
+00:04:38.560 myself was to build the application that
+00:04:41.759 they had told me that they wanted. Let
+00:04:44.240 me just open a browser and we'll take a
+00:04:47.360 little look see at what I mean exactly.
+00:04:49.520 Let me just uh move my face a little
+00:04:51.919 bit. There's more real estate. Now
+00:04:54.000 obviously Excalor is not what I care
+00:04:56.160 about. So they wanted me to build an
+00:04:58.400 open service broker. This is uh a a web
+00:05:01.199 app with an API which facilitates the
+00:05:04.080 provisioning of resources for a platform
+00:05:06.560 essentially. So you can you can see here
+00:05:09.280 um it's sort of built to operate in a
+00:05:12.080 Kubernetes world where you're submitting
+00:05:14.080 these provisioning requests as things
+00:05:17.680 come up and down and it's going to bind
+00:05:20.160 a resource to your pod or your cloud
+00:05:23.280 instance or whatever it is as you can
+00:05:25.520 see here. and it sort of sits in between
+00:05:28.240 these real resources. So you might
+00:05:31.840 provision something like a database and
+00:05:34.400 then you'll get MySQL. So you'll get
+00:05:36.400 something that's SQL compatible, but
+00:05:38.160 that's abstracted away for your internal
+00:05:40.400 developers. Anyhow, um the spec is uh is
+00:05:45.680 here on GitHub. You can take a look at
+00:05:47.280 it. It goes into it goes into like for
+00:05:50.560 example the catalog endpoint and the
+00:05:53.520 catalog lists all of the services and
+00:05:56.320 plans that are available on the OSP and
+00:05:59.759 uh just metadata about them and you
+00:06:02.400 might say query the the service broker
+00:06:05.600 and then display some of the metadata in
+00:06:08.160 your maybe you've got a a console a
+00:06:10.479 console like the Amazon console but
+00:06:12.960 maybe you've got something like that
+00:06:14.080 internally where developers can click
+00:06:16.400 and provision things. In the Alassian
+00:06:18.319 case, it was all through configuration
+00:06:20.560 files that were committed to um version
+00:06:23.520 control and then those would be uploaded
+00:06:26.000 uh during uploaded from a build server
+00:06:28.880 to deploy a service. Um but yeah, so you
+00:06:31.680 might have you know other APIs like uh
+00:06:34.800 provisioning here. So put and patch for
+00:06:37.520 updating and deletes and blah blah blah.
+00:06:40.000 So you would just basically go ahead and
+00:06:41.600 and implement this or I mean if you
+00:06:44.479 wanted to build your own and that is
+00:06:45.919 essentially what I did. You can see also
+00:06:47.840 there's a an open API document here that
+00:06:50.160 has the endpoints.
+00:06:52.240 So I chose to build this in in Python
+00:06:54.880 using Lask. Oh no, in fact what I what I
+00:06:58.400 built it with first is with a library
+00:07:01.199 called connection. This is a Python
+00:07:03.280 library which takes an open API document
+00:07:06.720 and then creates the API handlers for
+00:07:10.639 the paths for the API for the API routes
+00:07:13.360 that are in that document which is cool.
+00:07:15.440 But then we eventually I eventually
+00:07:17.360 migrated that to just pure Flask and
+00:07:20.639 then eventually migrated that to uh fast
+00:07:23.599 API which I believe is what it still is
+00:07:25.680 at the moment. Um, okay. So, it's the
+00:07:28.720 first two weeks and my primary focus is
+00:07:32.080 to build sort of what I promised in the
+00:07:34.400 interview, which is this web app that's
+00:07:36.560 going to be a broker for the platform
+00:07:39.440 and is going to allow self-service
+00:07:42.160 provisioning of load balancing in
+00:07:44.240 Atlassian. So, like I mentioned earlier,
+00:07:46.560 I started with this library called
+00:07:48.240 connection, which took an open API
+00:07:50.000 document, turned that into routes. But
+00:07:52.080 I'm going to just go with uh what it
+00:07:54.400 ended up as, which is a fast API app.
+00:07:57.039 Let's just say we've got fast API here,
+00:07:59.440 and then we've got uh a worker, and then
+00:08:03.680 we have a database, which was Dynamo DB.
+00:08:08.000 That's annoying. And we would have a
+00:08:10.720 client making requests. That's why
+00:08:13.360 that's the task API. The client would
+00:08:15.440 say, &quot;Hey, please provision something
+00:08:17.599 for me.&quot; And the web worker wouldn't do
+00:08:20.000 it itself. It would actually send that
+00:08:23.360 over SQS. It would drop the task details
+00:08:26.560 into SQS and the worker would then
+00:08:30.319 handle that. So, what does a
+00:08:32.640 provisioning task actually look like?
+00:08:35.679 It's something like creating DNS records
+00:08:39.760 somewhere, maybe creating a CloudFront
+00:08:43.760 distribution, maybe creating uh some API
+00:08:48.720 calls, and this would be the
+00:08:51.440 provisioning task that the worker would
+00:08:53.680 do asynchronously while the web and
+00:08:57.200 client would wait for it to be completed
+00:08:59.760 essentially. So the client's polling
+00:09:01.440 continuously to say, is it ready? Is it
+00:09:04.080 ready? When it is completed, the worker
+00:09:06.560 writes it to the database. The web
+00:09:08.640 server checks the status and then
+00:09:11.120 responds saying yes, it's finished or it
+00:09:13.600 will say that something went wrong and
+00:09:15.360 there was an error. So then we can sort
+00:09:17.440 of encapsulate this as the open service
+00:09:21.760 broker that I built. Pretty
+00:09:23.839 straightforward. Um, to be honest,
+00:09:26.399 there's not much more to this, but we're
+00:09:28.959 going to go and talk about some of the
+00:09:31.680 more complicated bits in just a second,
+00:09:34.080 and I will directly link to this as
+00:09:36.320 well. So, we've got this client
+00:09:38.240 requesting, let's say, please provision
+00:09:41.279 a load balancing, and that is
+00:09:43.279 essentially what they were asking for
+00:09:44.640 was some kind of load balancing
+00:09:47.279 somewhere in the edge infrastructure of
+00:09:49.600 Atlassian to allow traffic to go to
+00:09:52.320 their service. So that's a good uh
+00:09:54.959 demarcation point to start talking about
+00:09:57.040 the next thing that I sort of built and
+00:10:00.160 I built it through necessity of
+00:10:03.920 essentially I began to understand and
+00:10:06.959 unravel the requirements more as I went
+00:10:09.680 along. One of the architects had this
+00:10:12.160 idea to replace the load balances at
+00:10:15.760 Elassian which were enterprise load
+00:10:18.320 balances that had licensing costs with a
+00:10:22.000 open-source cloudnative sort of
+00:10:24.640 commodity proxy and the tech that we
+00:10:26.800 chose for that was proxy. You may be
+00:10:29.519 familiar with envoy proxy. If you're not
+00:10:32.000 then it's very similar to something like
+00:10:34.240 Engine X but perhaps more modern than
+00:10:37.839 Engine X. Um you can take a look at its
+00:10:41.120 you know what's what's great about it if
+00:10:43.120 you want you can just read through like
+00:10:44.880 why why choose envoy blah blah blah but
+00:10:47.040 essentially we wanted to replace the
+00:10:48.959 enterprise load balances we had make
+00:10:50.720 them self-service so that devs
+00:10:52.959 effectively didn't have to talk to us to
+00:10:55.200 go set up their load balancing so MVOY
+00:10:58.800 has an API that allows you to configure
+00:11:02.640 it dynamically being able to reload the
+00:11:05.519 configuration at runtime means that you
+00:11:07.600 can deploy deploy a whole bunch of
+00:11:09.279 proxies and have them sit there running
+00:11:11.680 all the time and then when someone needs
+00:11:14.240 different configuration for their
+00:11:15.920 particular uh service then they can push
+00:11:18.720 out a change through the provisioning
+00:11:20.880 task detailed here and those changes
+00:11:24.000 should flow to the proxy somehow and so
+00:11:26.800 now that's a good time to talk about the
+00:11:30.240 envoy management server that I built
+00:11:32.320 which we called the envoy control plane
+00:11:34.560 and this was it's essentially quite
+00:11:38.399 similar uh uh to this. Yet again, we
+00:11:42.800 used a fast API app, but this was
+00:11:45.200 slightly different actually. Let's go
+00:11:46.800 into a little bit of detail here. I'm
+00:11:48.240 just going to wing this because I should
+00:11:49.839 be able to wing it cuz I know it quite
+00:11:51.279 well. Uh this is actually a I open
+00:11:54.000 sourced this this software and I called
+00:11:56.079 it Sovereign. You can actually go find
+00:11:57.600 that on Bitbucket. It's it's a public
+00:12:00.000 repo at least for now. I don't know if
+00:12:02.640 that's going to be the case always, but
+00:12:04.800 essentially Sovereign runs a fast API
+00:12:06.720 app. And some of the things that it
+00:12:09.120 takes in as
+00:12:11.440 uh configuration are templates
+00:12:15.440 and context. And so the app uh pulls
+00:12:20.480 these uh it's obviously got like uh say
+00:12:24.320 let's just say this is the
+00:12:25.360 configuration. Okay, that's sticky now.
+00:12:28.480 So the templates might be particular
+00:12:32.560 resource types. And in envoy, you've got
+00:12:35.279 stuff like clusters, routes, listeners,
+00:12:39.200 and let's just leave it at that for the
+00:12:41.200 moment. You'd have these kinds of
+00:12:43.360 templates. And so when this when this
+00:12:47.200 management server loads up, it'll read
+00:12:49.120 in these templates in the context and
+00:12:50.880 make these available as APIs for the uh
+00:12:55.120 proxies. So then you can imagine let's
+00:12:58.399 just say we've got uh an envoy here. It
+00:13:02.959 is going to request these things and
+00:13:06.000 sovereign is going to respond by taking
+00:13:08.480 the context putting it into the
+00:13:10.399 templates and rendering out different
+00:13:12.720 content u as the context changes. Now
+00:13:15.600 where does the context come from? Well
+00:13:17.920 this is part of this management server
+00:13:20.000 that is dynamic. So where let's just uh
+00:13:22.800 let's just do a bit of flip around here.
+00:13:26.160 put the context here. The context
+00:13:28.959 actually comes from this database, but
+00:13:31.839 we are requesting it from the broker. So
+00:13:35.279 the we're requesting data from the
+00:13:37.519 broker and other sources. In fact, let's
+00:13:40.160 just add another source here. Let's just
+00:13:42.000 say we have a little S3 bucket with some
+00:13:44.800 data and maybe that data is changing
+00:13:46.560 over time. So we take that data, it's
+00:13:48.480 dynamic, we feed that into the
+00:13:50.079 templates. the the templates have logic
+00:13:53.600 that spits out particular envoy
+00:13:56.160 configuration and then the proxy changes
+00:13:57.920 over time. So what happens is we've got
+00:14:00.560 a client that's making provisioning
+00:14:03.040 requests to our broker. The worker is
+00:14:06.160 doing some provisioning tasks and then
+00:14:08.720 writing the new data to the database.
+00:14:11.040 Then the the management server say pop
+00:14:14.880 this just encapsulate this a little bit.
+00:14:16.959 The management server is then pulling
+00:14:18.560 that data from various places and
+00:14:20.880 generating new configuration. That
+00:14:23.040 configuration hits the proxy and then it
+00:14:25.760 starts doing different stuff. That is
+00:14:27.760 essentially the second part of what I
+00:14:30.079 built. We've got a broker, we've got a
+00:14:31.760 management server, we got the client, we
+00:14:33.279 got the proxy. Uh why did this detach?
+00:14:35.839 Anyway, so now we've sort of figured
+00:14:37.920 this stuff out. This is all at a very
+00:14:40.560 high level. So we've got this created.
+00:14:43.440 Now we can sort of think more about more
+00:14:47.600 infrastructure type things. We've got
+00:14:49.839 this proxy, but how do we end up with
+00:14:52.000 this proxy? How does that actually get
+00:14:53.839 provisioned? What is it? Where does it
+00:14:55.360 live? Well, let's start with one thing,
+00:14:58.560 which is that these proxies,
+00:15:02.320 there's many many many of them as you
+00:15:04.800 would expect and they are provisioned by
+00:15:07.839 um they are provisioned by a cloud
+00:15:11.199 formation template. This is an AWS thing
+00:15:13.920 that allows you to essentially do
+00:15:15.839 infrastructure as code and it allows you
+00:15:18.079 to create resources in in AWS that you
+00:15:22.000 would normally create via the console if
+00:15:24.000 you were just uh let's say a a basic
+00:15:27.440 user. So what kind of stuff do we create
+00:15:30.000 in here? Well, if we were to do this
+00:15:31.920 stuff from scratch, we'd probably have
+00:15:34.320 like a VPC and then we'd have uh, you
+00:15:38.480 know, a subnet inside that VPC and maybe
+00:15:41.920 we'd have an internet gateway. Maybe
+00:15:45.600 we'd have uh uh good old security group.
+00:15:49.360 Maybe we'd have a key pair. Maybe an AM
+00:15:53.440 roll. Um, oh, of course, we need to have
+00:15:56.480 the autoscaling group. Of course, that's
+00:16:00.000 what's going to be uh creating these uh
+00:16:03.680 EC2 instances.
+00:16:06.000 And well, the autoscaling group needs
+00:16:10.320 an AMI, doesn't it? Indeed, it does need
+00:16:12.959 an AMI. AM RO has to be attached to um
+00:16:16.800 has to be attached to all these. The key
+00:16:19.040 pair goes on on these. Security group is
+00:16:22.240 attached to the this. Well, it's
+00:16:25.519 probably attached to the auto scanning
+00:16:26.880 group to be fair. Well, the EC2
+00:16:29.199 instances would inherit it from the from
+00:16:31.040 the ASG blah blah blah. So, we've got
+00:16:33.680 all these like uh blocks of resources
+00:16:36.160 and stuff like that. Cool. Let's let's
+00:16:38.079 put these up. Put these up together.
+00:16:39.360 Blah blah blah. Cool. So, yeah, we've
+00:16:41.680 kind of got like a little template going
+00:16:43.519 on here and it's creating these proxies
+00:16:45.600 in many different regions. Uh we might
+00:16:48.880 have we might have like uh NLB in here,
+00:16:52.880 layer 4 proxy. Maybe we'd have uh bit of
+00:16:56.880 maybe a bit of ACM. Of course, these
+00:16:59.040 acronyms might mean nothing to some
+00:17:01.040 people, but for people that have used
+00:17:02.720 AWS, they would know what these things
+00:17:04.319 are. And they know it's not really that
+00:17:06.559 complicated. It's like pretty basic
+00:17:08.240 building blocks. And this is what we
+00:17:10.240 created. Uh say 2,000 proxies, something
+00:17:14.880 like 13 regions, blah blah blah. Um and
+00:17:18.640 we also had a little bit of Route 53
+00:17:20.480 records for for stuff. Now the AMI, it's
+00:17:24.720 not really provisioned by the the
+00:17:26.959 template. It's more like it's referenced
+00:17:29.039 by the template, isn't it? So that would
+00:17:30.799 bring us on to the next piece of this
+00:17:33.760 thing that I built, which is well, we
+00:17:36.240 need to produce an AMI. We need to
+00:17:37.919 produce a standard image for these
+00:17:40.240 proxies and it's going to include all
+00:17:41.919 the important stuff in there. So how do
+00:17:43.919 we create this image for the proxy?
+00:17:46.000 Well, in this case, we had a repository
+00:17:49.200 that was using Hashi called packer and
+00:17:52.880 uh we had um a salt stack uh let's call
+00:17:57.360 it configuration and so we would use
+00:18:00.559 packer to um let's say we'd have the EC
+00:18:05.200 we'd use the EC2 provisioner and so we
+00:18:08.080 would create an EC2 in like a dev
+00:18:10.480 account. We'd then upload all of our
+00:18:12.080 salt stack configuration. Consult stack
+00:18:14.000 by the way is very similar to puppet
+00:18:16.320 anible chef in case you're not aware of
+00:18:18.240 what those are. It is configuration
+00:18:19.919 management tools and that's a fancy way
+00:18:22.320 of saying that I want to run I want to
+00:18:25.280 install packages put files and run
+00:18:28.320 services on a machine in a particular
+00:18:30.559 way in a particular order and it
+00:18:32.640 automates that process makes that
+00:18:35.120 process declarative for you well not for
+00:18:37.440 you but it helps you to to make it
+00:18:39.120 declarative. So we created a little um
+00:18:42.080 create a little EC2 live running EC2
+00:18:44.799 here. We dump the config on there. We do
+00:18:47.200 a provisioning step and then we take the
+00:18:49.760 uh essentially turn this into an image
+00:18:52.480 like cut it down uh whatever snapshot it
+00:18:54.720 and turn it into an image. So that
+00:18:56.480 essentially would just produce this uh
+00:18:58.960 AMI. Now what was included in here?
+00:19:00.880 Let's let's say we can just uh we can
+00:19:03.039 include a few things here. Let's just
+00:19:04.799 say we had um we had states for for
+00:19:07.919 envoy. So like let's say install
+00:19:10.400 configure uh let's say just install and
+00:19:13.440 configure envoy uh logging agent um
+00:19:16.720 security uh let's say /h hardening
+00:19:19.679 network tuning um containers uh tracing
+00:19:23.919 oh let's just say let's just say uh
+00:19:26.400 observability agent there and that can
+00:19:28.400 cover that can cover logging tracing
+00:19:31.039 metrics so that's essentially what's
+00:19:33.120 going on here produces the AMI
+00:19:35.280 cloudformation template takes this AMI
+00:19:37.919 provision provisions these EC2s say EC2
+00:19:40.720 and they're running with uh all this
+00:19:42.960 stuff and then when they uh when they
+00:19:44.960 get provisioned uh that's something that
+00:19:46.640 we forgot here there's parameters
+00:19:48.559 parameters bump that up bump this up
+00:19:52.160 make it neat so we've got the parameters
+00:19:54.400 and these at uh uh runtime would pass in
+00:19:59.280 secrets and keys and blah blah blah and
+00:20:02.400 then these these proxies would grab
+00:20:04.640 their resources be configured and then
+00:20:06.960 they would be running and accepting
+00:20:08.640 traffic. Boom. That's it. Everything's
+00:20:11.200 done working. This was essentially the
+00:20:13.360 first two years of working at Atlassian.
+00:20:15.440 So now when a developer says, I want to
+00:20:18.559 run my service and I want it to be uh I
+00:20:21.600 want it to be accessible on the internet
+00:20:23.200 with all the fancy bells and whistles
+00:20:24.799 and routing and advanced stuff. We'd say
+00:20:26.880 yes, no problem. Let me just get that
+00:20:29.280 provisioned for you. We send off the
+00:20:31.919 provisioning task. We write something to
+00:20:33.600 the database. We tell them it's ready.
+00:20:35.520 and the management server hits the uh
+00:20:39.200 broker says what's the current state of
+00:20:42.400 things takes that data plus other data
+00:20:45.120 puts it into the templates creates
+00:20:47.280 resources out of those templates gives
+00:20:49.360 them to envoy on when it requests them
+00:20:52.000 and this was all pre uh provisioned it's
+00:20:55.440 long lived infrastructure with cloud for
+00:20:58.320 the cloudformation is relying on an AMI
+00:21:00.799 that it can use to provision those
+00:21:02.720 images those machines so yeah that is
+00:21:05.120 probably the first 24 months. So what
+00:21:07.120 was next after this? So this was the
+00:21:09.039 foundation of our team essentially the
+00:21:11.520 product that we were going forward with
+00:21:13.600 um which is uh centralized load
+00:21:16.559 balancing managed by our team and all of
+00:21:19.039 the features that we provided to our
+00:21:21.600 customers would live in logic defined in
+00:21:24.159 these templates. We've now laid the
+00:21:26.640 foundation for the team. We've got proxy
+00:21:28.720 infrastructure that's reacting
+00:21:30.240 dynamically to services that are being
+00:21:33.039 deployed with different configurations
+00:21:34.960 over time. What was next after that
+00:21:36.799 point? The big thing after that was
+00:21:39.039 taking some of the larger products and
+00:21:42.080 making it possible for them to use this
+00:21:45.280 platform component. That was one big
+00:21:47.200 part. And the second big part was
+00:21:49.039 migrating all of the microservices
+00:21:51.600 within Atlassian to use this. And that
+00:21:54.159 was relatively easier because we could
+00:21:56.880 enforce that through the platform.
+00:21:58.799 Essentially what that means is that the
+00:22:00.960 platform was previously providing very
+00:22:03.360 basic load balancing to every service
+00:22:05.440 and they forced a switch to where you
+00:22:08.960 could no longer expose your service
+00:22:10.799 publicly through their load balancer
+00:22:12.559 which was too basic and you had to go
+00:22:14.400 through our centralized load balancing
+00:22:16.559 infrastructure and to explicitly
+00:22:19.039 configure it as a way of signaling your
+00:22:21.440 intention for that service to be
+00:22:23.679 publicly accessible. Whereas previous it
+00:22:26.640 could have just been maybe accidental
+00:22:28.799 that your service was public and not
+00:22:30.960 very well protected. So that was the big
+00:22:33.200 major push. We got products like Jira,
+00:22:36.400 Confluence, Bitbucket, Status Page and
+00:22:39.039 many others behind this edge
+00:22:41.200 infrastructure. And then what was after
+00:22:43.520 that? Well, now we can sort of talk more
+00:22:45.840 about let's say we can talk more about
+00:22:48.480 the uh the MVO based product that we had
+00:22:52.400 here. So this particular thing we've got
+00:22:55.280 this groundwork of being able to take
+00:22:58.799 basic inputs from a developer and to
+00:23:01.200 turn that into templated configuration.
+00:23:04.240 Now Envoy has a lot of configuration. It
+00:23:07.840 has a lot of stuff you can configure.
+00:23:10.159 Let's just look at the routes for
+00:23:12.240 example. Let's look at the virtual host
+00:23:14.400 for example. You can configure what
+00:23:16.159 domains to accept traffic on. Pretty
+00:23:17.919 basic. You can do routing. sort of
+00:23:19.760 basic, but once you delve into how you
+00:23:21.919 can do this, it gets pretty complicated
+00:23:24.080 pretty quickly. You can match on
+00:23:25.840 different things. You can route it in
+00:23:27.600 different ways. You can do direct
+00:23:29.200 responses, you can do redirects, blah
+00:23:31.120 blah blah. You can add and remove
+00:23:32.799 headers. I guess I guess you could say
+00:23:35.440 that's pretty standard. But you can also
+00:23:37.360 choose, for example, when you're
+00:23:39.360 configuring a route action, you can also
+00:23:41.120 choose to send to any cluster that's on
+00:23:44.799 the proxy. So then if I have a thousand
+00:23:47.760 devs or a thousand services and they
+00:23:50.400 each have their own cluster and any
+00:23:52.400 route can send to any cluster. Well, it
+00:23:55.120 sort of brings up this point of well
+00:23:57.039 this data here needs to be validating
+00:24:00.799 that and abstracting that and so on and
+00:24:05.520 so forth. So there was definitely a
+00:24:07.919 concentration of a lot of the
+00:24:09.360 development work around this logic here.
+00:24:11.760 Making sure it was validated here in
+00:24:14.000 terms of the parameters were validated
+00:24:16.240 such that when those parameters were run
+00:24:18.880 through the logic in this in these
+00:24:21.360 resources that it would produce valid
+00:24:24.080 resources. Pretty standard I suppose you
+00:24:26.159 could say. I don't know maybe I I do
+00:24:27.840 feel like I have the curse of knowledge.
+00:24:29.679 Um and that this stuff seems easier to
+00:24:32.240 me now because I I've done so much with
+00:24:34.400 it. Uh but there's a lot there's a lot
+00:24:36.400 in here. And if we go into uh for
+00:24:38.799 example extensions, there's a lot of
+00:24:41.039 extensions that can be applied to a
+00:24:44.000 listener or a or a cluster. For example,
+00:24:46.720 you might have uh where is it? You've
+00:24:49.120 got uh network filters here. You've got
+00:24:51.679 all kinds of network filters. And a big
+00:24:53.919 one that we obviously used was a HTTP
+00:24:56.880 connection manager where you could
+00:24:58.960 configure routing and how to handle
+00:25:01.840 proxies and websockets and all this
+00:25:04.799 stuff. And then if we go a little bit
+00:25:06.559 before that, there's also things like
+00:25:08.720 external processing and external
+00:25:11.360 authorization. And this sort of brings
+00:25:13.919 us to let's say something that happened
+00:25:16.799 next. So I did briefly mention that some
+00:25:18.880 of the big parts after building this was
+00:25:20.559 to migrate big products onto it. Let's
+00:25:23.039 assume that's all finished. It took it
+00:25:24.960 took some time. It took probably a
+00:25:26.640 couple years because there were many
+00:25:28.159 features that needed to be built out
+00:25:29.600 here and and wherever else in order to
+00:25:32.559 support the larger products and their
+00:25:34.640 special cases to work on what's
+00:25:38.240 effectively a generic multi-tenented
+00:25:40.799 platform. So let's just assume that
+00:25:42.080 they're all migrated. Then we have more
+00:25:44.000 features that we want to add. I did sort
+00:25:46.559 of allude to like we have this we have
+00:25:48.640 this groundwork. we have this dynamic
+00:25:51.200 configuration. What I'm trying to say is
+00:25:53.360 that we we created opportunity we
+00:25:56.000 created opportunity to centralize logic
+00:25:58.960 and to handle concerns early in the
+00:26:02.799 chain of requests. What I mean by that
+00:26:05.279 is a customer. Let's just make a c
+00:26:07.919 smiley customer. A customer is someone
+00:26:10.640 that's using our cloud products or
+00:26:12.559 Atlassian cloud products. they are
+00:26:14.640 hitting the uh let's just say they're
+00:26:16.799 hitting an NLB first and that's then
+00:26:19.120 being proxied to these boys. Yes, if we
+00:26:22.240 can deal with the problems here before
+00:26:24.400 they reach a service. Let's say let's
+00:26:27.440 give a square. Let's call it a backend
+00:26:29.600 service, you know. So, the requests are
+00:26:31.440 flowing in from the customer to the
+00:26:33.200 proxies and to the pretty standard
+00:26:35.039 stuff. If we can deal with certain
+00:26:37.200 concerns here before it reaches here, we
+00:26:40.320 save a lot of time. We save some money
+00:26:43.039 which is and it saves the customer time.
+00:26:45.360 It's great for everyone really. Um, and
+00:26:47.760 one of those things, now this is where
+00:26:49.600 the the diagram becomes complicated. So,
+00:26:52.240 let's move off to the side. Let's just
+00:26:54.320 copy a few of these. Let's grab three
+00:26:57.120 things and let's move over to the side.
+00:26:59.120 So, we've got the customer talking to
+00:27:00.799 the proxy and the proxy is talking to
+00:27:02.799 the back end. And of course, the request
+00:27:04.960 comes back up and back out to the
+00:27:07.039 customer. Fine and dandy. Yes, this is a
+00:27:09.200 this is a proxy. Whatever. There's no
+00:27:11.200 surprises here. Now with our with with
+00:27:13.840 the products that Atlassian runs,
+00:27:16.080 there's all kinds of stuff that needs to
+00:27:18.400 happen like authentication for example
+00:27:20.240 or authorization or uh DOS protection or
+00:27:24.960 rate limiting or access logs all this
+00:27:28.080 kinds of stuff that needs to happen. And
+00:27:30.000 it's just turns out that we can deal
+00:27:32.080 with them here instead of on a bazillion
+00:27:36.000 bazillion backend services. Just imagine
+00:27:39.279 that there are a bazillion bazillion of
+00:27:42.559 these. Just zillions upon zillions. See
+00:27:46.080 daisy. Just zillions and zillions. A
+00:27:48.799 gazillion. Now, can you imagine if a
+00:27:51.039 thousand dev teams needed to deal with
+00:27:53.760 all this stuff plus more on their own
+00:27:56.640 service? It would be a tremendous waste
+00:27:59.520 of money for the company. It would slow
+00:28:01.279 down features. The customer wouldn't get
+00:28:03.279 their features when they need them. and
+00:28:05.279 stuff is already hard enough to deliver
+00:28:07.200 as it is. Thus the platform and
+00:28:10.399 centralized management of resources and
+00:28:12.640 centralized uh implementation of these
+00:28:15.039 features. So how how were some of these
+00:28:17.760 things implemented? Well, EOS protection
+00:28:19.840 was really provided by uh CloudFront and
+00:28:23.279 that was that was uh spearheaded by a
+00:28:26.559 colleague of mine who is very smart and
+00:28:29.520 conscientious and essentially let's make
+00:28:32.640 this a bit more accurate. Let's just say
+00:28:34.559 let's get rid of these. There's an NLB
+00:28:36.640 here. Blah blah blah blah blah blah. And
+00:28:39.120 of course, it's two-way. So, that's one
+00:28:40.799 way that we can take care of that
+00:28:42.559 concern for these backend services.
+00:28:44.720 Great. We've solved solved a concern for
+00:28:46.640 that. Fantastic. These others, well,
+00:28:48.960 access logs, what we can do is something
+00:28:52.000 like we can use these network filters.
+00:28:55.039 Yes, we use the network filters. For
+00:28:56.880 example, in the HCM, we have
+00:29:03.520 Where are the access logs? Access log.
+00:29:05.840 Now remember all of this configuration
+00:29:08.320 is dynamic. It's all dynamic and it is
+00:29:11.679 created by templates which abstract away
+00:29:15.279 the resource configuration from the
+00:29:17.600 developer who wants to configure it.
+00:29:19.279 They provide simple parameters. Those
+00:29:21.200 parameters are then validated and then
+00:29:22.960 they are fed into the template as
+00:29:24.720 context so that we produce the correct
+00:29:27.279 template. That means that they send us a
+00:29:30.960 little bit of JSON and we set up this
+00:29:33.360 whole thing for them with all the access
+00:29:35.279 logging and blah blah blah whatever. So
+00:29:37.200 that is done in fact inside the proxy
+00:29:40.640 natively. Fantastic. Some of these
+00:29:42.720 things however a little bit more
+00:29:44.080 complicated. These things we need to use
+00:29:46.320 a sidecar model where envoy is talking
+00:29:48.480 out the side and then these are their
+00:29:51.200 own services running locally on the on
+00:29:53.520 the proxy. So these would be like uh
+00:29:56.720 containers essentially. We've got this
+00:29:58.320 sidecar model and those sidecars some of
+00:30:01.200 them were contributed by other teams and
+00:30:03.760 some of them were created by me and our
+00:30:06.000 team. The authentication and the
+00:30:07.440 authentication sidec was created by me
+00:30:09.600 written of course in the lord's language
+00:30:13.279 rust authorization was done by another
+00:30:15.600 team and rate limiting was done by
+00:30:17.039 another team and so they were able to
+00:30:18.880 contribute these sidecars which by the
+00:30:20.640 way were set up and uh were downloaded
+00:30:24.559 and configured onto the AMI by this
+00:30:27.600 provisioning uh AMI provisioning flow.
+00:30:30.240 Great. So now we have a programmable
+00:30:33.039 proxy with sidec cars that have their
+00:30:36.159 own separate logic from the proxy and
+00:30:38.559 they too can actually receive
+00:30:40.960 configuration which is dynamic over the
+00:30:43.520 wire locally and uh and make it even
+00:30:47.120 more programmable. So we're solving all
+00:30:49.039 these concerns before they hit these uh
+00:30:51.840 these backends and in very very little
+00:30:54.320 time. So that was uh essentially that is
+00:30:57.360 some of the stuff I worked on after
+00:30:59.120 migrations and blah blah blah. Yay. What
+00:31:01.760 do I do after that? Let's move this big
+00:31:03.600 blob rid of this mess. So then we had
+00:31:06.559 some non-technical requirements come
+00:31:08.559 through more compliance and things like
+00:31:11.760 that. And that effort was very tedious
+00:31:14.880 and boring for me personally. It didn't
+00:31:16.880 involve building new stuff. It involved
+00:31:19.039 taking all of this making sure that it
+00:31:21.600 was compliant for c in certain ways very
+00:31:24.880 bored boring checklist ticking work blah
+00:31:28.720 blah blah. So I said earlier that I
+00:31:30.480 would also go over some of the
+00:31:31.520 nontechnical things that I had to go
+00:31:33.360 through while working at last. Obviously
+00:31:35.200 all of that stuff is sort of highlevel
+00:31:37.440 technical stuff that I just showed. What
+00:31:40.320 were some of the other stuff that I went
+00:31:42.000 through during my 8year slog at last
+00:31:44.799 year? The first few things to come that
+00:31:47.120 come to mind is that I have grown
+00:31:50.320 tremendously in my diplomacy skills,
+00:31:54.880 conflict avoidance, probably conflict
+00:31:57.600 resolution as well, being able to
+00:32:00.159 persuade, propose ideas, being able to
+00:32:03.039 teach, educate and mentor. These are the
+00:32:05.360 non-technical things that you probably
+00:32:07.039 don't hear a lot about. But after
+00:32:10.000 another thing is that the ability to
+00:32:12.559 maintain things, maintain software and
+00:32:15.600 systems to see where the cracks show up
+00:32:18.960 and to build things so that those cracks
+00:32:22.240 don't show up as or at least to make
+00:32:24.080 them show up late as possible. That's
+00:32:26.080 definitely something that I picked up.
+00:32:27.600 Let's just talk about that maintenance
+00:32:29.039 for a sec. I noticed over the eight
+00:32:31.360 years that I was there when I built
+00:32:33.120 these apps, these uh services that
+00:32:36.799 there's obviously the at the very start
+00:32:38.720 there's the requirement to onboard
+00:32:41.039 people and write documentation and train
+00:32:43.360 people so that they understand how
+00:32:45.679 things work, know how to contribute to
+00:32:47.519 them and debug them so that when they
+00:32:49.600 become when they go on call they know
+00:32:52.000 where to look, what could go wrong,
+00:32:54.399 where do things break essentially. So
+00:32:56.720 you know that's whether that's knowing
+00:32:59.440 what kind of what particular log
+00:33:01.360 messages mean, what sort of metrics to
+00:33:03.440 check when something is going wrong and
+00:33:06.000 what those metrics could allude to how
+00:33:08.559 to resolve those um you know particular
+00:33:12.000 expected problems if they're not
+00:33:13.919 automated away. Um and this could be
+00:33:16.080 like you know Amazon could have an
+00:33:18.159 outage and the database isn't access for
+00:33:20.240 example. What do you do in that case?
+00:33:22.000 What if SQS stops working and you can't
+00:33:24.000 do any provisioning tasks? what how what
+00:33:26.320 impact does that have on the services
+00:33:27.919 that need to provision resources and how
+00:33:29.919 do you resolve it? Um what happens if an
+00:33:32.559 if a proxy receives bad configuration?
+00:33:34.880 What if it receives configuration that's
+00:33:36.880 valid but that destroys the traffic
+00:33:38.960 that's flowing through? How do you pick
+00:33:40.480 up on those? What do you check etc etc.
+00:33:43.279 So there's obviously a lot of that at
+00:33:44.720 the start when you build something.
+00:33:46.320 There's a lot of that at the start but
+00:33:48.240 the thing that's more difficult is over
+00:33:50.720 time people come and go. People get
+00:33:52.960 hired. people get people leave for other
+00:33:54.799 jobs and whatnot and so you get you have
+00:33:57.440 to do that onboarding again obviously
+00:33:59.279 but you should have more people that are
+00:34:01.200 able to do that on boarding collectively
+00:34:02.960 but then you sort of bring in new
+00:34:04.480 opinions people look at an existing
+00:34:06.399 codebase and they want to change things
+00:34:08.960 they want to make it better and so on
+00:34:10.399 and so forth and so they do that and
+00:34:13.199 change ends there's I I suppose there's
+00:34:16.000 this concept of churn in the codebase
+00:34:18.079 the area that churns it's sort of it
+00:34:20.480 becomes predictable where all the churn
+00:34:22.560 is going to to be at a certain stage.
+00:34:25.520 And once you notice that there is some
+00:34:27.599 churn, it's sort of a a smell. It is
+00:34:30.639 it's an indication that that part of the
+00:34:33.760 service or project is going to keep
+00:34:36.639 increasing in size or complexity and
+00:34:40.000 something there needs to happen.
+00:34:41.760 Something needs to be done to avoid that
+00:34:43.839 mess. It's just just how software goes.
+00:34:46.239 disperse. It'll be interesting with all
+00:34:48.879 these uh vibecoded apps and AI assisted
+00:34:52.159 apps to see how we handle that when we
+00:34:54.560 have people that are not really familiar
+00:34:56.399 with what they've created and the
+00:34:58.720 maintenance burdens appear. They don't
+00:35:00.720 appear at the beginning. There's just
+00:35:02.079 not enough going through. It hasn't been
+00:35:03.839 around for long enough. There hasn't
+00:35:05.119 been enough changes. Building something
+00:35:06.720 is easy. Changing it and making sure
+00:35:08.480 that you can still change it over time
+00:35:10.400 is difficult because as you change
+00:35:12.240 things, it slowly becomes harder to
+00:35:14.880 change. things start to get coupled and
+00:35:16.960 all of a sudden when you change
+00:35:18.240 something in one area it affects another
+00:35:20.240 and you have to deal with the task of
+00:35:21.520 detangling something and you might be
+00:35:22.880 able to bind these areas quite quickly
+00:35:24.880 get an LLM to perform the detangling for
+00:35:27.760 you. I think that's if we can do that
+00:35:29.760 that's fantastic but I don't want to be
+00:35:31.359 too optimistic just in case. So there's
+00:35:34.560 that on that's my opinion on the
+00:35:36.160 maintenance side of things. The next
+00:35:38.000 thing I want to talk about is when I
+00:35:40.320 mention diplomacy, what I'm really
+00:35:42.480 trying to say is that I was exposed to
+00:35:45.280 different types of managers and
+00:35:47.200 colleagues over time and everyone has
+00:35:49.359 different personalities and styles of
+00:35:51.119 working. And because I was exposed to so
+00:35:52.960 many different types, I experienced
+00:35:55.119 conflicts with certain people. And even
+00:35:58.079 though I had conflicts, there's still
+00:35:59.599 people that I respect. It's just
+00:36:01.520 something that happens when you when
+00:36:03.680 your personality doesn't mix with their
+00:36:05.760 personality. And that's just something
+00:36:07.119 that's a bit inevitable. And I think
+00:36:09.200 that the only thing you can really do in
+00:36:11.440 those situations is to try to have the
+00:36:14.160 self-awareness and the awareness of the
+00:36:16.160 other person and the I suppose
+00:36:18.400 understanding of psychology and and how
+00:36:20.880 people work to an extent so that you can
+00:36:23.440 be responsible for that difference and
+00:36:25.599 the potential for conflict and to handle
+00:36:28.720 it effectively to to anticipate the
+00:36:31.200 conflict that's going to arise and and
+00:36:33.440 to do something to make the relationship
+00:36:36.320 work. And maybe it's impossible. I don't
+00:36:37.920 know. But that was definitely a source
+00:36:39.599 of great stress and at times it affected
+00:36:43.760 my performance and so I do think that
+00:36:47.839 because it affected my performance that
+00:36:50.160 I took it quite seriously and I learned
+00:36:52.400 and changed as a result. So the next
+00:36:54.720 time that those situations come around I
+00:36:57.520 do firmly believe that I'll be able to
+00:37:00.000 handle them quite a lot better. And then
+00:37:02.560 some of the other things in fact one of
+00:37:04.640 the things that I found quite
+00:37:06.160 challenging was
+00:37:08.480 mentoring. And so I find it easy to help
+00:37:11.440 people to point out areas where they
+00:37:15.760 need understanding and to deliver that
+00:37:18.800 understanding to them to break down
+00:37:20.880 complex things into simple terms so that
+00:37:23.440 they can build a mental model of the
+00:37:26.240 system that they're working on. I have
+00:37:27.920 that ability. I'm quite good at that.
+00:37:29.440 But mentoring is distinct from that. I
+00:37:32.000 had an intern in the last year and I
+00:37:34.400 will first say that the result of their
+00:37:36.480 internship was that they got the highest
+00:37:38.960 rating possible and it essentially
+00:37:41.280 guarantees uh an offer to work at it
+00:37:44.400 last year. The project that they worked
+00:37:45.839 on was very impressive and how they
+00:37:48.960 approached it and and built it was very
+00:37:51.200 impressive and so that's why they got
+00:37:52.560 that excellent rating. What I found
+00:37:54.800 personally difficult was striking the
+00:37:57.920 balance between it was essentially
+00:38:00.480 striking the balance between how much
+00:38:02.320 time I give to the mentee and what that
+00:38:06.160 time would consist of whether it's you
+00:38:08.320 know I didn't I don't want to give them
+00:38:09.680 answers to problems but I don't want
+00:38:12.000 them to get so stuck that they become
+00:38:13.920 frustrated I have no idea if I reached
+00:38:16.320 that balance but I suppose the results
+00:38:18.480 speak for themselves. I I but I I I'm
+00:38:21.200 not sure if I can attribute the results
+00:38:22.880 to me necessarily. The intern was helped
+00:38:25.200 by some of my other colleagues in areas
+00:38:27.839 that I'm much weaker in. So they
+00:38:30.000 effectively got subject matter experts
+00:38:33.200 in a few different areas to contribute
+00:38:35.839 to their success, but then they did the
+00:38:38.480 majority of the leg work to actually
+00:38:41.119 build the thing and to test it and to
+00:38:43.520 make design decisions and stuff like
+00:38:45.040 that. And it was very successful. But I
+00:38:46.480 still have this lingering impression or
+00:38:48.480 feeling that mentoring is difficult for
+00:38:50.640 me and that I I don't have um a good way
+00:38:54.079 of u figuring that out because I've
+00:38:56.560 never been mentored myself. So I don't
+00:38:58.800 really know what to expect or what they
+00:39:01.040 do. But I want to emphasize that that's
+00:39:03.440 a very specific type of mentoring that
+00:39:05.280 I'm not too sure about. Whereas training
+00:39:07.359 my colleagues, getting them to
+00:39:08.800 understand, working, you know, working
+00:39:10.960 through problems with my colleagues,
+00:39:12.480 that was that was essentially my bread
+00:39:14.160 and butter during the last half of my
+00:39:16.160 employment, you know, jumping on a a
+00:39:18.560 call and going through stuff. Feedback
+00:39:21.040 that I got from my colleagues all the
+00:39:22.480 time was that I was always available to
+00:39:24.240 help and that I could boil down hard
+00:39:26.240 topics into something that was
+00:39:27.520 understandable, which I'm pretty proud
+00:39:29.680 of. And I've been yapping for a while. I
+00:39:32.480 think that covers quite a lot. If I
+00:39:34.240 remember more, I'll probably just make a
+00:39:35.680 second video. Um maybe maybe if people
+00:39:38.000 are interested, I could actually go
+00:39:39.520 through and build some of these things.
+00:39:41.119 I could actually go through and build
+00:39:42.320 some of these things from scratch on
+00:39:44.079 stream or just a video uploaded to kind
+00:39:46.240 of show I guess essentially what I made
+00:39:48.240 and maybe recreate and sharpen my skills
+00:39:50.400 a little bit more. Um maybe I've got a
+00:39:52.560 lot of stuff on my to-do list, so maybe
+00:39:54.320 maybe not. It depends on the demand.
+00:39:55.760 Anyway, I'm going to cut the video from
+00:39:57.440 here. If you listened all the way
+00:39:58.960 through or to portions, then thank you
+00:40:01.280 very much. I hope it was interesting and
+00:40:03.119 enlightening and whatever else.

@@ -1,0 +1,79 @@
+{
+  "tokenizer": "tiktoken \u00b7 o200k_base",
+  "towers": {
+    "A \u00b7 stack(C,Pi,L)": {
+      "cells": 19,
+      "kernel_expands_ok": true,
+      "nl": {
+        "tokens": 176,
+        "words": 118,
+        "chars": 538
+      },
+      "kernel": {
+        "tokens": 18,
+        "words": 3,
+        "chars": 21
+      },
+      "ratio_nl_over_kernel": 9.78
+    },
+    "B \u00b7 stack(C,C,Pi)+cap": {
+      "cells": 24,
+      "kernel_expands_ok": true,
+      "nl": {
+        "tokens": 213,
+        "words": 138,
+        "chars": 617
+      },
+      "kernel": {
+        "tokens": 26,
+        "words": 4,
+        "chars": 32
+      },
+      "ratio_nl_over_kernel": 8.19
+    }
+  },
+  "kernel_def": {
+    "tokens": 216,
+    "words": 72,
+    "chars": 553
+  },
+  "analysis": {
+    "mean_tokens_per_tower_nl": 194.5,
+    "mean_tokens_per_tower_kernel": 22.0,
+    "kernel_definition_overhead": 216,
+    "marginal_saving_per_tower": 172.5,
+    "breakeven_towers": 1.25,
+    "totals_by_N": {
+      "1": {
+        "nl": 194,
+        "kernel": 238,
+        "kernel_cheaper": false
+      },
+      "2": {
+        "nl": 389,
+        "kernel": 260,
+        "kernel_cheaper": true
+      },
+      "3": {
+        "nl": 584,
+        "kernel": 282,
+        "kernel_cheaper": true
+      },
+      "5": {
+        "nl": 972,
+        "kernel": 326,
+        "kernel_cheaper": true
+      },
+      "10": {
+        "nl": 1945,
+        "kernel": 436,
+        "kernel_cheaper": true
+      },
+      "20": {
+        "nl": 3890,
+        "kernel": 656,
+        "kernel_cheaper": true
+      }
+    }
+  }
+}

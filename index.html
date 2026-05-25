@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>cyberdeck — architect, builder, and a substrate that names itself</title>
+<meta name="description" content="an instrument for watching an operator–Claude dyad converge — Judy Fan's architect/builder, run on our own way of working"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500;1,6..72,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+/* ── tokens (web-next memo surface, light) ────────────────────────── */
+:root{
+  --memo-bg:#FAF8F5; --memo-bg-deep:#F3EFE7; --memo-surface:#F0EDE8; --memo-card:#FFFFFF;
+  --memo-border:#D4CFC7; --memo-rule:#E6E0D5; --memo-text:#2C2825; --memo-ink:#141413;
+  --memo-muted:#8A837A; --memo-faint:#B7B0A4;
+  --memo-accent:#B8602A; --memo-accent-d:#8F4419; --memo-olive:#788C5D; --memo-sky:#6A8CAF;
+  --memo-red:#C04A3E; --memo-amber:#C49B4A;
+  --memo-shadow-1:0 1px 0 rgba(20,20,19,.03),0 8px 24px rgba(20,20,19,.04);
+  --memo-shadow-2:0 1px 0 rgba(20,20,19,.04),0 12px 32px rgba(20,20,19,.06);
+  --face-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --face-serif:"Newsreader","Iowan Old Style",Georgia,"Times New Roman",serif;
+  --radius-card:10px; --radius-chip:999px;
+  --ease:cubic-bezier(.4,0,.2,1); --motion-resize:150ms;
+}
+:root[data-theme="dark"]{
+  --memo-bg:#141413; --memo-bg-deep:#1A1614; --memo-surface:#1F1A14; --memo-card:#1A1614;
+  --memo-border:#3A342D; --memo-rule:#2D2823; --memo-text:#E6E0D5; --memo-ink:#FAF8F5;
+  --memo-muted:#B7B0A4; --memo-faint:#8A837A;
+  --memo-accent:#D4793C; --memo-accent-d:#B8602A; --memo-olive:#9BB37A; --memo-sky:#8AAECF;
+  --memo-red:#E07A6A; --memo-amber:#D4B670;
+  --memo-shadow-1:0 1px 0 rgba(0,0,0,.40),0 8px 24px rgba(0,0,0,.30);
+  --memo-shadow-2:0 1px 0 rgba(0,0,0,.50),0 12px 32px rgba(0,0,0,.40);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--memo-bg);color:var(--memo-text);
+  transition:background-color var(--motion-resize) var(--ease),color var(--motion-resize) var(--ease);}
+body{font:400 13px/1.55 var(--face-mono);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+::selection{background:var(--memo-accent);color:#fff;}
+code{font:400 12px/1 var(--face-mono);color:var(--memo-accent);}
+em{font-style:italic;}
+
+/* ── floating theme toggle (no navbar) ────────────────────────────── */
+.toggle-float{position:fixed;top:18px;right:18px;z-index:30;
+  display:inline-flex;align-items:center;background:var(--memo-bg);
+  border:1px solid var(--memo-border);border-radius:999px;padding:3px;box-shadow:var(--memo-shadow-1);}
+.toggle-float button{background:transparent;border:0;padding:5px 11px;font:600 9.5px/1 var(--face-mono);
+  text-transform:uppercase;letter-spacing:.12em;color:var(--memo-muted);cursor:pointer;border-radius:999px;
+  transition:background var(--motion-resize) var(--ease),color var(--motion-resize) var(--ease);}
+.toggle-float button:hover{color:var(--memo-text);}
+.toggle-float button.on{background:var(--memo-ink);color:var(--memo-bg);}
+
+/* ── page + hero ──────────────────────────────────────────────────── */
+.page{max-width:1080px;margin:0 auto;padding:0 56px 96px;}
+.hero{padding:120px 0 56px;}
+.hero .eyebrow{font:600 11px/1 var(--face-mono);color:var(--memo-accent);text-transform:uppercase;
+  letter-spacing:.18em;margin:0 0 28px;}
+.hero h1{font:700 clamp(42px,7vw,86px)/1.0 var(--face-serif);color:var(--memo-ink);
+  letter-spacing:-.018em;max-width:940px;margin:0 0 34px;}
+.hero h1 em{font-style:italic;color:var(--memo-accent);font-weight:600;}
+.lede{max-width:660px;font:400 15.5px/1.68 var(--face-mono);color:var(--memo-text);margin:0 0 16px;}
+.lede em{color:var(--memo-accent);font-style:italic;}
+.heroMeta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:var(--radius-chip);
+  border:1px solid var(--memo-border);background:var(--memo-bg);font:500 11px/1 var(--face-mono);
+  color:var(--memo-muted);text-transform:uppercase;letter-spacing:.08em;}
+.pill b{color:var(--memo-ink);font-weight:600;letter-spacing:0;text-transform:none;}
+.pill.active{color:var(--memo-olive);border-color:var(--memo-olive);}
+.pill.active::before{content:"•";color:var(--memo-olive);font-size:14px;line-height:0;}
+
+/* ── numbered sections ────────────────────────────────────────────── */
+.numbered{padding:44px 0;border-top:1px solid var(--memo-rule);}
+.sectionNo{font:500 14px/1 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;
+  letter-spacing:.12em;margin-bottom:14px;}
+.sectionNo .accent{color:var(--memo-accent);}
+.sectionNo .ttl{color:var(--memo-ink);margin-left:4px;font-weight:600;}
+.prose{max-width:680px;}
+.prose p{font:400 14.5px/1.68 var(--face-mono);color:var(--memo-text);margin:0 0 16px;}
+.prose p:last-child{margin-bottom:0;}
+.prose b{color:var(--memo-ink);font-weight:600;}
+.prose em{color:var(--memo-accent);font-style:italic;}
+.secLede{font:400 italic 17px/1.5 var(--face-serif);color:var(--memo-text);max-width:720px;margin:0 0 26px;}
+.secLede em{color:var(--memo-accent);}
+
+/* ── "what is it" nouns ───────────────────────────────────────────── */
+.nouns{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 24px;}
+.noun{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:var(--radius-card);
+  box-shadow:var(--memo-shadow-1);padding:18px 18px;}
+.noun .w{font:600 19px/1 var(--face-serif);color:var(--memo-faint);text-decoration:line-through;
+  text-decoration-color:var(--memo-accent);text-decoration-thickness:1.5px;margin:0 0 12px;}
+.noun .why{font:400 12.5px/1.5 var(--face-mono);color:var(--memo-text);}
+.noun .why b{color:var(--memo-ink);font-weight:600;}
+.noun .no{display:block;margin-top:8px;font:400 italic 12.5px/1.45 var(--face-serif);color:var(--memo-muted);}
+.resolve{background:var(--memo-bg-deep);border:1px solid var(--memo-border);border-left:3px solid var(--memo-accent);
+  border-radius:var(--radius-card);padding:20px 24px;}
+.resolve .big{font:500 22px/1.32 var(--face-serif);color:var(--memo-ink);margin:0;}
+.resolve .big b{color:var(--memo-accent);font-weight:600;font-style:italic;}
+.resolve .sub{font:400 13px/1.6 var(--face-mono);color:var(--memo-muted);margin-top:10px;}
+
+/* ── reference list ───────────────────────────────────────────────── */
+.refs{list-style:none;border-top:1px solid var(--memo-rule);margin-top:24px;}
+.refs li{border-bottom:1px solid var(--memo-rule);display:grid;grid-template-columns:140px 1fr;gap:20px;padding:14px 0;align-items:baseline;}
+.refs .src{font:600 11px/1.4 var(--face-mono);color:var(--memo-accent);letter-spacing:.04em;}
+.refs .claim{font:400 13.5px/1.55 var(--face-mono);color:var(--memo-text);}
+.refs .claim b{color:var(--memo-ink);font-weight:600;}
+
+/* ── role cards ───────────────────────────────────────────────────── */
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0 0;}
+.role{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:var(--radius-card);
+  box-shadow:var(--memo-shadow-1);padding:20px 22px;display:flex;flex-direction:column;gap:9px;
+  transition:transform var(--motion-resize) var(--ease),box-shadow var(--motion-resize) var(--ease);}
+.role:hover{transform:translateY(-2px);box-shadow:var(--memo-shadow-2);}
+.role .lab{font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--memo-accent);}
+.role .who{font:600 18px/1.1 var(--face-serif);color:var(--memo-ink);}
+.role .who small{display:block;font:500 11px/1 var(--face-mono);color:var(--memo-muted);margin-top:5px;letter-spacing:.04em;}
+.role .body{font:400 12.5px/1.55 var(--face-mono);color:var(--memo-text);flex:1;}
+.role.builder .lab{color:var(--memo-sky);} .role.builder{border-top:2px solid var(--memo-sky);}
+.role.architect{border-top:2px solid var(--memo-accent);}
+.role.lex .lab{color:var(--memo-olive);} .role.lex{border-top:2px solid var(--memo-olive);}
+
+/* ── stats + metric table ─────────────────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:0 0 24px;}
+.stat{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:var(--radius-card);
+  box-shadow:var(--memo-shadow-1);padding:16px 18px;}
+.stat .k{font:500 10px/1 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.1em;margin:0 0 8px;}
+.stat .v{font:600 28px/1 var(--face-serif);color:var(--memo-ink);}
+.stat .v small{font:500 15px/1 var(--face-mono);color:var(--memo-faint);margin:0 5px;}
+
+/* ── findings ─────────────────────────────────────────────────────── */
+.finding{padding:24px 0;border-top:1px solid var(--memo-rule);display:grid;
+  grid-template-columns:148px 1fr;gap:28px;align-items:start;}
+.finding:first-of-type{border-top:0;}
+.finding .left{display:flex;flex-direction:column;gap:10px;}
+.vtag{display:inline-flex;align-self:flex-start;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--radius-chip);
+  font:600 9.5px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.1em;border:1px solid;}
+.vtag.corrob{color:var(--memo-olive);border-color:var(--memo-olive);}
+.vtag.diverge{color:var(--memo-amber);border-color:var(--memo-amber);}
+.vtag.extend{color:var(--memo-sky);border-color:var(--memo-sky);}
+.vtag.fail{color:var(--memo-accent);border-color:var(--memo-accent);}
+.finding .mech{font:400 11.5px/1.5 var(--face-mono);color:var(--memo-muted);}
+.finding .mech b{color:var(--memo-text);font-weight:600;}
+.finding .ttl{font:600 19px/1.25 var(--face-serif);color:var(--memo-ink);margin:0 0 8px;}
+.finding .obs{font:400 13.5px/1.6 var(--face-mono);color:var(--memo-text);}
+.finding .obs code{color:var(--memo-accent);}
+.finding .viz{margin-top:14px;}
+
+/* mini dual-curve */
+.curves{display:flex;gap:24px;flex-wrap:wrap;}
+.curve{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:8px;padding:12px 14px;}
+.curve .cap{font:500 10px/1.3 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+.curve .cap b{color:var(--memo-ink);}
+
+/* metric table */
+.mtable{width:100%;border-collapse:collapse;margin-top:6px;}
+.mtable th,.mtable td{padding:9px 9px;border-bottom:1px solid var(--memo-rule);text-align:right;}
+.mtable th{font:600 9.5px/1 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.08em;}
+.mtable td{font:500 12.5px/1 var(--face-mono);color:var(--memo-text);font-feature-settings:"tnum";}
+.mtable th:first-child,.mtable td:first-child{text-align:left;}
+.mtable td.name{font-weight:500;color:var(--memo-ink);}
+.mtable td.peak{color:var(--memo-accent);font-weight:700;}
+.mtable td.muted{color:var(--memo-faint);}
+.mtable td.delta{color:var(--memo-olive);font-weight:600;}
+.mtable td.spark{text-align:center;width:84px;}
+.mtable tr:last-child td{border-bottom:0;}
+
+/* reconciliation */
+.recbar{display:flex;height:32px;border-radius:8px;overflow:hidden;border:1px solid var(--memo-border);background:var(--memo-card);}
+.recbar .seg{display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--face-mono);color:#fff;min-width:16px;}
+.reclegend{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font:400 11.5px/1 var(--face-mono);color:var(--memo-muted);}
+.reclegend .item{display:flex;align-items:center;gap:7px;}
+.reclegend .sw{width:10px;height:10px;border-radius:3px;}
+.reclegend b{color:var(--memo-ink);font-weight:600;}
+
+/* replication frames */
+.frames{list-style:none;border-top:1px solid var(--memo-rule);}
+.frames li{border-bottom:1px solid var(--memo-rule);}
+.frames .row{display:grid;grid-template-columns:24px 92px 1fr auto;align-items:baseline;gap:14px;padding:11px 0;}
+.frames .m{font:600 13px/1 var(--face-mono);text-align:center;}
+.frames .m.ok{color:var(--memo-olive);} .frames .m.bad{color:var(--memo-red);}
+.frames .id{font:600 12.5px/1 var(--face-mono);color:var(--memo-ink);}
+.frames .d{font:400 italic 13px/1.4 var(--face-serif);color:var(--memo-muted);}
+.frames .v{font:600 12px/1 var(--face-mono);color:var(--memo-accent);font-feature-settings:"tnum";white-space:nowrap;}
+.frames .v.bad{color:var(--memo-red);}
+
+/* open-test callout */
+.opentest{background:var(--memo-bg-deep);border:1px dashed var(--memo-border);border-radius:var(--radius-card);padding:22px 26px;}
+.opentest .q{font:500 19px/1.4 var(--face-serif);color:var(--memo-ink);font-style:italic;margin:0 0 12px;}
+.opentest .d{font:400 13.5px/1.6 var(--face-mono);color:var(--memo-text);}
+.opentest .d code{color:var(--memo-accent);}
+.opentest .d b{color:var(--memo-ink);font-weight:600;}
+
+/* ── diagrams (sections 02 + 03) ──────────────────────────────────── */
+.diagram{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:var(--radius-card);
+  box-shadow:var(--memo-shadow-1);padding:18px 20px;margin:24px 0 0;}
+.diagram svg{display:block;width:100%;height:auto;}
+.diagram text{font-family:var(--face-mono);}
+.diagram .dcap{font:500 10px/1.4 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;}
+.diagram .dcap b{color:var(--memo-ink);font-weight:600;}
+.diagram .serif{font-family:var(--face-serif);}
+
+/* ── agent transcripts (the thinking process) ─────────────────────── */
+.transcripts{margin-top:24px;display:grid;gap:14px;}
+.tcard{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:var(--radius-card);box-shadow:var(--memo-shadow-1);padding:16px 20px;}
+.tcard h4{font:600 10.5px/1.3 var(--face-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--memo-ink);margin:0 0 6px;}
+.turn{display:grid;grid-template-columns:118px 1fr;gap:16px;padding:13px 0;border-top:1px solid var(--memo-rule);}
+.turn .who{font:600 10px/1.45 var(--face-mono);text-transform:uppercase;letter-spacing:.08em;}
+.turn .who.arch{color:var(--memo-accent);} .turn .who.build{color:var(--memo-sky);}
+.turn .who small{display:block;color:var(--memo-faint);font-weight:400;letter-spacing:0;text-transform:none;margin-top:3px;}
+.turn .said{font:400 italic 13.5px/1.6 var(--face-serif);color:var(--memo-text);}
+.turn .said .tok{font-style:normal;font-family:var(--face-mono);font-size:11px;color:var(--memo-faint);}
+.turn .said mark{background:color-mix(in srgb,var(--memo-red) 20%,transparent);color:var(--memo-ink);padding:0 3px;border-radius:2px;}
+.turn .spec{font:500 12px/1.55 var(--face-mono);color:var(--memo-text);white-space:pre-wrap;}
+.turn .spec .tok{color:var(--memo-faint);}
+.turn .out{font:600 12.5px/1.55 var(--face-mono);}
+.turn .out.ok{color:var(--memo-olive);} .turn .out.bad{color:var(--memo-red);}
+.turn .gloss{font:400 12px/1.55 var(--face-mono);color:var(--memo-muted);margin-top:5px;}
+.turn code{color:var(--memo-accent);}
+@media (max-width:880px){.turn{grid-template-columns:1fr;gap:5px;}}
+
+/* ── footer ───────────────────────────────────────────────────────── */
+.siteFooter{margin-top:64px;padding:28px 0 0;border-top:1px solid var(--memo-rule);
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;font:400 12px/1.6 var(--face-mono);color:var(--memo-muted);}
+.siteFooter .col h4{font:600 10px/1 var(--face-mono);color:var(--memo-ink);text-transform:uppercase;letter-spacing:.16em;margin:0 0 10px;}
+.siteFooter .col p{margin-bottom:4px;}
+.siteFooter .col code{color:var(--memo-accent);}
+.aphorism{grid-column:1/-1;margin-top:24px;padding-top:18px;border-top:1px dashed var(--memo-rule);
+  font:500 italic 15px/1.5 var(--face-serif);color:var(--memo-text);}
+.aphorism + .aphorism{border-top:0;margin-top:6px;padding-top:0;color:var(--memo-muted);font-size:13.5px;}
+
+@media (max-width:880px){
+  .page{padding-left:24px;padding-right:24px;}
+  .hero{padding-top:84px;}
+  .nouns,.stats{grid-template-columns:repeat(2,1fr);}
+  .roles{grid-template-columns:1fr;}
+  .finding{grid-template-columns:1fr;gap:14px;}
+  .refs li{grid-template-columns:1fr;gap:4px;}
+  .siteFooter{grid-template-columns:1fr;}
+}
+@media print { .toggle-float { display: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="toggle-float" id="tt">
+  <button data-t="light" class="on">light</button>
+  <button data-t="dark">dark</button>
+</div>
+
+<div class="page" id="top">
+
+  <section class="hero">
+    <p class="eyebrow">cyberdeck · a working note · 2026-05-24</p>
+    <h1>We kept reaching for the <em>wrong noun</em>.</h1>
+    <p class="lede">Is it a framework? An experiment? An agent? An architecture? After a week of building it — and watching it build itself — the closest honest word is <em>instrument</em>: a way of working that records its own formation, built to run a cognitive-science finding on the dyad doing the running.</p>
+    <div class="heroMeta">
+      <span class="pill">working week <b>2026-05-20 → 23</b></span>
+      <span class="pill active">substrate live</span>
+      <span class="pill">anchor <b>Judy Fan · architect/builder</b></span>
+    </div>
+  </section>
+
+  <section class="numbered" id="what">
+    <div class="sectionNo"><span class="accent">01</span> / <span class="ttl">WHAT IS THIS</span></div>
+    <p class="secLede">Four nouns keep getting reached for. Each is tempting; none quite holds.</p>
+    <div class="nouns">
+      <div class="noun"><div class="w">framework</div><div class="why"><b>tempting:</b> it ships reusable substrate — channels, hooks, panels, MCP.<span class="no">but there's nothing to build <em>against</em>; you mount your work <em>on</em> it and it watches.</span></div></div>
+      <div class="noun"><div class="w">experiment</div><div class="why"><b>tempting:</b> it's the running test of a published finding.<span class="no">but it never stops to conclude — the experiment and the workbench are the same surface.</span></div></div>
+      <div class="noun"><div class="w">agent</div><div class="why"><b>tempting:</b> agents run inside it on Anthropic Managed Agents.<span class="no">but the agents are tenants, not the thing — the thing is what dispatches them.</span></div></div>
+      <div class="noun"><div class="w">architecture</div><div class="why"><b>tempting:</b> it has a layered structure — root → ideas → workstreams → primitives.<span class="no">but architecture is the static noun; this one changes shape as you type intent.</span></div></div>
+    </div>
+    <div class="resolve">
+      <p class="big">It behaves most like an <b>instrument</b> — a substrate that measures its own way of working.</p>
+      <p class="sub">And the thing it instruments is a result from cognitive science: Judy Fan's <b style="color:var(--memo-ink)">architect / builder</b> paradigm. The rest of this note is that result, how we run it, and what it showed.</p>
+    </div>
+  </section>
+
+  <section class="numbered" id="reference">
+    <div class="sectionNo"><span class="accent">02</span> / <span class="ttl">THE REFERENCE — JUDY FAN'S ARCHITECT &amp; BUILDER</span></div>
+    <div class="prose">
+      <p>In Fan's block-tower studies, two people play <b>asymmetric roles</b> across repeated trials: an <b>architect</b> who can see the target and must describe it, and a <b>builder</b> who can only act on the description. Over trials the architect's language <em>compresses</em> — natural-language phrases co-emerge with reusable program fragments. A shorthand forms because both partners now share a history.</p>
+      <p>Scaled up, library induction follows a <b>U-curve</b> over the count of named primitives: too few forces re-derivation every time; too many produces retrieval noise (Wong et al. 2022). Under a tighter communication budget, dyads <em>diverge</em> into distinct local dialects rather than converge across producers. Convention is the residue of repeated reference under a budget.</p>
+    </div>
+    <div class="diagram"><div class="dcap">library-size <b>U-curve</b> (schematic — qualitative tradeoff after Wong et al. 2022; our operating window · 25–60 is our heuristic, not from the literature) — search + description cost vs. number of named primitives; the marker is our measured kernel</div><div id="ucurve"></div></div>
+    <ul class="refs">
+      <li><span class="src">McCarthy, Hawkins, Wang, Holdaway &amp; Fan, CogSci 2021</span><span class="claim"><b>Learning to communicate about shared procedural abstractions.</b> The architect/builder block-tower task — asymmetric roles, language compresses across repeated trials. (arXiv:2107.00077)</span></li>
+      <li><span class="src">Wong, McCarthy, Grand, Friedman, Tenenbaum, Andreas, Hawkins &amp; Fan, CogSci 2022</span><span class="claim"><b>Identifying concept libraries from language about object structure.</b> Library-size U-curve — qualitative tradeoff between re-derivation cost and retrieval noise. (arXiv:2205.05666)</span></li>
+      <li><span class="src">Fan — "Cognitive Tools for Making the Invisible Visible"</span><span class="claim"><b>Communication budget and dialect divergence.</b> Under a tighter communication budget, dyads diverge into distinct local dialects rather than converging across producers.</span></li>
+      <li><span class="src">Hawkins, Frank &amp; Goodman, CogSci 2017</span><span class="claim"><b>Convention-formation in iterated reference games.</b> Partners reuse the cheapest form that still works; it crystallizes into the convention.</span></li>
+    </ul>
+  </section>
+
+  <section class="numbered" id="howwework">
+    <div class="sectionNo"><span class="accent">03</span> / <span class="ttl">HOW WE WORK IT</span></div>
+    <p class="secLede">We didn't build Fan's experiment as a study. <em>We are the dyad</em> — and we added a third seat the literature implies but never names.</p>
+    <div class="prose">
+      <p>The operator is the <b>architect</b>; a Claude session is the <b>builder</b>; an append-only ledger is the shared notebook the next session reads on resume — <b>memory the lab dyads never had</b>. Their finches are individual humans under a timer; ours is an operator–model pair iterating against a substrate that enforces the shared history.</p>
+    </div>
+    <div class="diagram">
+      <div class="dcap">the working loop — three seats over one <b>append-only ledger</b>, and the return arc the lab dyads never had</div>
+      <svg viewBox="0 0 680 250" role="img" aria-label="the working loop: architect, builder, lexicographer over a shared ledger">
+        <defs>
+          <marker id="arrAc" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--memo-accent)"/></marker>
+          <marker id="arrMu" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--memo-muted)"/></marker>
+        </defs>
+        <!-- return arc -->
+        <path d="M576,44 C576,8 104,8 104,42" fill="none" stroke="var(--memo-accent)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrAc)"/>
+        <text x="340" y="13" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--memo-accent)">compresses the next intent &#8635;</text>
+        <!-- architect -->
+        <rect x="14" y="44" width="180" height="64" rx="8" fill="var(--memo-bg)" stroke="var(--memo-border)"/>
+        <rect x="14" y="44" width="4" height="64" rx="2" fill="var(--memo-accent)"/>
+        <text x="32" y="66" font-size="8.5" font-weight="600" letter-spacing="1.5" fill="var(--memo-accent)">ARCHITECT</text>
+        <text x="32" y="85" font-size="14" font-weight="600" class="serif" fill="var(--memo-ink)">the operator</text>
+        <text x="32" y="100" font-size="9.5" fill="var(--memo-muted)">sees the target · describes it</text>
+        <!-- builder -->
+        <rect x="250" y="44" width="180" height="64" rx="8" fill="var(--memo-bg)" stroke="var(--memo-border)"/>
+        <rect x="250" y="44" width="4" height="64" rx="2" fill="var(--memo-sky)"/>
+        <text x="268" y="66" font-size="8.5" font-weight="600" letter-spacing="1.5" fill="var(--memo-sky)">BUILDER</text>
+        <text x="268" y="85" font-size="14" font-weight="600" class="serif" fill="var(--memo-ink)">a Claude session</text>
+        <text x="268" y="100" font-size="9.5" fill="var(--memo-muted)">acts · writes the artifact</text>
+        <!-- lexicographer -->
+        <rect x="486" y="44" width="180" height="64" rx="8" fill="var(--memo-bg)" stroke="var(--memo-border)"/>
+        <rect x="486" y="44" width="4" height="64" rx="2" fill="var(--memo-olive)"/>
+        <text x="504" y="66" font-size="8.5" font-weight="600" letter-spacing="1.5" fill="var(--memo-olive)">LEXICOGRAPHER</text>
+        <text x="504" y="85" font-size="14" font-weight="600" class="serif" fill="var(--memo-ink)">the substrate</text>
+        <text x="504" y="100" font-size="9.5" fill="var(--memo-muted)">proposes convergent names</text>
+        <!-- arrows between -->
+        <line x1="198" y1="76" x2="246" y2="76" stroke="var(--memo-muted)" stroke-width="1.4" marker-end="url(#arrMu)"/>
+        <text x="222" y="70" text-anchor="middle" font-size="9" fill="var(--memo-muted)">intent</text>
+        <line x1="434" y1="76" x2="482" y2="76" stroke="var(--memo-muted)" stroke-width="1.4" marker-end="url(#arrMu)"/>
+        <text x="458" y="70" text-anchor="middle" font-size="9" fill="var(--memo-muted)">trace</text>
+        <!-- down connectors -->
+        <line x1="104" y1="108" x2="104" y2="158" stroke="var(--memo-border)" stroke-width="1.2" stroke-dasharray="2 3"/>
+        <line x1="340" y1="108" x2="340" y2="158" stroke="var(--memo-border)" stroke-width="1.2" stroke-dasharray="2 3"/>
+        <line x1="576" y1="108" x2="576" y2="158" stroke="var(--memo-border)" stroke-width="1.2" stroke-dasharray="2 3"/>
+        <!-- rail -->
+        <rect x="14" y="160" width="652" height="44" rx="8" fill="var(--memo-bg-deep)" stroke="var(--memo-border)"/>
+        <text x="340" y="180" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1" fill="var(--memo-ink)">LEDGER &#183; KERNEL</text>
+        <text x="340" y="195" text-anchor="middle" font-size="9.5" fill="var(--memo-muted)">the append-only notebook the next session reads &#183; memory the lab dyads never had</text>
+      </svg>
+    </div>
+    <div class="roles">
+      <div class="role architect">
+        <div class="lab">role · architect</div>
+        <div class="who">the operator<small>declares intent</small></div>
+        <div class="body">sees the target, describes it. across a working day the intent compresses — from a 466-char spec to a 17-char "decompose witness."</div>
+      </div>
+      <div class="role builder">
+        <div class="lab">role · builder</div>
+        <div class="who">a Claude session<small>applies the spec</small></div>
+        <div class="body">acts on the description, writes the artifact. every dispatch is recorded to the lathe ledger — the trial record the experiment runs on.</div>
+      </div>
+      <div class="role lex">
+        <div class="lab">role · lexicographer</div>
+        <div class="who">the substrate<small>curates the names</small></div>
+        <div class="body">scans chat ∪ lathe ∪ ADRs ∪ kernel ∪ code; proposes convergent names, holds back operator-only words until repeated reference pulls them across.</div>
+      </div>
+    </div>
+    <div class="prose" style="margin-top:22px">
+      <p><em>A name is not the residue of a procedure; it is the seat the procedure can return to.</em></p>
+    </div>
+  </section>
+
+  <section class="numbered" id="findings">
+    <div class="sectionNo"><span class="accent">04</span> / <span class="ttl">FINDINGS — THE WEEK, READ AGAINST THE LITERATURE</span></div>
+    <p class="secLede">One working day (2026-05-23) ran 29 typed dispatches, ratified two ADRs, shipped four panels, and replicated itself. Read against Fan, Wong &amp; McCarthy, and Hawkins — here is what survived.</p>
+    <div class="stats">
+      <div class="stat"><div class="k">kernel · modifiers</div><div class="v">12<small>·</small>21</div></div>
+      <div class="stat"><div class="k">ADRs · panels</div><div class="v">2<small>·</small>8</div></div>
+      <div class="stat"><div class="k">lathe events / day</div><div class="v">29</div></div>
+      <div class="stat"><div class="k">lexicon names</div><div class="v">31</div></div>
+    </div>
+
+    <div class="finding">
+      <div class="left">
+        <span class="vtag diverge">corroborated &amp; diverged</span>
+        <div class="mech">↔ <b>DreamCoder wake-sleep</b> / Fan procedural compression</div>
+      </div>
+      <div class="right">
+        <div class="ttl">the coining curve — expensive to mint, cheap to invoke</div>
+        <div class="obs">Intents arced from bring-up to a coining peak to shorthand across one day. The shape is exactly what the literature predicts. <em>But</em> it lives at the operator's time-anchored cut: re-bucket the same 29 events into equal counts and the means only rise — no descent. <code>ADR-0005a</code> defers the verdict until ≥3 days agree.</div>
+        <div class="viz"><div class="diagram"><div class="dcap">mean intent length per phase <b>(characters)</b> — the arc at the operator's time-anchored cut vs. the monotone rise at equal-count buckets</div><div id="coining"></div></div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="left">
+        <span class="vtag corrob">corroborated</span>
+        <div class="mech">↔ <b>Hawkins</b> convention-via-language</div>
+      </div>
+      <div class="right">
+        <div class="ttl">the asymmetry — operator words, Claude words, and the kernel between</div>
+        <div class="obs"><code>lathe · witness · vault</code> appear <b>0×</b> in the day's chat but <b>20× · 20× · 7×</b> in the ledger; <code>knowledge graph</code> appears 12× in chat, 2× in the ledger — correctly held back as operator-only. <em>The convergent terms — the ones both readers speak — are the kernel by definition.</em> The cleanest reproduction of the day.</div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="left">
+        <span class="vtag corrob">corroborated</span>
+        <div class="mech">↔ <b>Wong &amp; McCarthy</b> library-size U-curve</div>
+      </div>
+      <div class="right">
+        <div class="ttl">the sweet spot — 33 names, zero divergent</div>
+        <div class="obs">12 kernel + 21 modifiers = <b>33 named primitives</b>, squarely inside our operating window of 25–60 (our heuristic). Every name resolves to live code, a code-shaped slot, or a concept-shaped slot — <em>no name says X while the code does Y.</em></div>
+        <div class="viz"><div class="diagram"><div class="dcap">kernel coverage <b>(abstraction count)</b> — every name resolved against the code primitives</div><div id="recon"></div></div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="left">
+        <span class="vtag extend">corroborated &amp; extended</span>
+        <div class="mech">↔ <b>Hawkins</b> residue-of-reference</div>
+      </div>
+      <div class="right">
+        <div class="ttl">the lift — convention promoted to an addressable interface</div>
+        <div class="obs">The operator copy-pasted the same <code>dispatch-coda</code> across 11 of 30 high-stakes dispatches; <code>probe-classify</code> and <code>ADR-ratify</code> recurred the same way. The literature describes the trace forming — <em>the substrate makes the trace addressable</em>: each cheapest-form crystallized into a named modifier the kernel can compose from.</div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="left">
+        <span class="vtag fail">the FAIL is the finding</span>
+        <div class="mech">↔ scientific reproducibility</div>
+      </div>
+      <div class="right">
+        <div class="ttl">replication — three pass, one designed fail</div>
+        <div class="obs">A colleague clones the frozen ledgers and runs <code>replicate_dyad.py</code>. The PASSes confirm what repeats; the one FAIL surfaces a real seam — the U-shape is present at one cut and absent at another. <em>A checklist that always passes is decoration; one that exposes the seams is a lab notebook.</em></div>
+        <div class="viz"><ul class="frames" id="checks"></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="numbered" id="experiment">
+    <div class="sectionNo"><span class="accent">05</span> / <span class="ttl">THE EXPERIMENT — DOES THE KERNEL ACTUALLY COST LESS?</span></div>
+    <p class="secLede">The open test, run. Same target — a 2D block tower — given to a builder two ways: in <em>natural language</em>, and in the shared <em>kernel</em> of named shapes. We measured the tokens the builder must consume (<code>tiktoken · o200k_base</code>) and checked every reconstruction against ground truth. Architect = Sonnet, builder = Haiku, harness at <code>experiments/architect-builder-kernel/</code>.</p>
+
+    <div class="diagram"><div class="dcap">experiment 1 · <b>amortized context cost</b> — cumulative tokens to build N towers; the kernel pays its definition once, then stays near-flat per tower</div><div id="crossover"></div></div>
+    <p class="note">Per tower the architect's message shrinks <b>~9×</b> (≈194 → ≈22 tokens). The 216-token kernel definition is repaid after <b>1.25 towers</b>; by 20 towers the kernel is <b>5.9×</b> cheaper. Both builders reconstructed the tower <em>exactly</em> — the compression was lossless.</p>
+
+    <div class="diagram"><div class="dcap">experiment 2 · <b>the regularity axis</b> — kernel vs. natural-language tokens as towers get less compressible; ✓/✗ marks whether <i>concise</i> prose survived reconstruction</div><div id="ladder"></div></div>
+    <p class="note">Push toward irregularity and the token lead collapses — <b>8.2× → 1.8×</b> — because incompressible structure forces the kernel back to primitives. But the kernel stayed <b>exact at every level</b>, while concise natural language <b>broke</b> on the irregular tower (the builder missed one cell and invented three). <em>The kernel is the only register that is both brief and exact.</em></p>
+
+    <div class="transcripts">
+      <div class="tcard">
+        <h4>the agents, verbatim · exp 1 — one tower, two registers</h4>
+        <div class="turn"><div class="who arch">architect<small>natural language</small></div>
+          <div class="said">"On a grid with columns 0–2 and rows 0–8, place unit blocks. Rows 0–2: fill column 0 for all three rows; on row 0 also fill columns 1 and 2; on row 2 also fill columns 1 and 2; leave columns 1 and 2 of row 1 empty (open on the right). Rows 3–5: fill column 0 and column 2 for all three rows; on row 5 also fill column 1 (open at the bottom). Rows 6–8: fill column 0 for all three rows; on row 6 also fill columns 1 and 2." <span class="tok">— 176 tokens</span></div></div>
+        <div class="turn"><div class="who arch">architect<small>kernel</small></div>
+          <div class="spec">C(0,0)
+Pi(0,3)
+L(0,6)  <span class="tok">— 18 tokens</span></div></div>
+        <div class="turn"><div class="who build">builder<small>haiku · both</small></div>
+          <div class="out ok">✓ reconstructed 19 / 19 cells exactly — from either register.</div></div>
+      </div>
+
+      <div class="tcard">
+        <h4>the agents, verbatim · exp 2 · L3 — where natural language broke</h4>
+        <div class="turn"><div class="who arch">architect<small>sonnet · concise prose</small></div>
+          <div class="said">"…Left column: solid from bottom to row 5. Center-left cluster: col 1 has cells at r0 and r2, <mark>col 2 is solid r0–r3</mark>. At r5 both cols 1 and 2 filled… <mark>a small inverted-L or T near the top right</mark>…" <span class="tok">— 159 tokens</span></div></div>
+        <div class="turn"><div class="who build">builder<small>haiku</small></div>
+          <div class="out bad">✗ IoU 0.86 — missed <code>(2,4)</code>; invented <code>(2,1) (4,5) (4,8)</code>.</div>
+          <div class="gloss">The break starts in the architect's head: <em>"col 2 is solid r0–r3"</em> is wrong — column 2 is filled at r0, r2, r3, r4, r5 — so the builder faithfully added <code>(2,1)</code> and dropped <code>(2,4)</code>. Compressed prose lost the structure before the builder ever read it.</div></div>
+        <div class="turn"><div class="who arch">architect<small>kernel</small></div>
+          <div class="spec">C(0,0)
+Pi(0,3)
+block(4,1) block(5,2) … <span class="tok">×12  — 84 tokens</span></div></div>
+        <div class="turn"><div class="who build">builder<small>haiku</small></div>
+          <div class="out ok">✓ reconstructed 26 / 26 exactly — a symbolic spec has no ambiguity to lose.</div></div>
+      </div>
+    </div>
+
+    <div class="opentest">
+      <p class="q">The naming substrate buys exactness under compression pressure; tokens are just the visible part.</p>
+      <p class="d">A shared name is not only shorter — <b>it is the one description that cannot be misread.</b> Full harness, both experiments, and the builder transcripts live at <code>experiments/architect-builder-kernel/</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sectionNo"><span class="accent">06</span> / <span class="ttl">THE UNRIGGED TEST — A REAL ARCHITECTURE</span></div>
+    <p class="secLede">The towers above were authored by the kernel itself — so lossless reconstruction was partly true <em>by construction</em>. The unrigged test takes a <em>real</em> engineering talk (an ex-Atlassian self-service edge platform), rebuilt as a component graph — a validated <b>39 nodes / 48 edges</b> — and hands it to builders three ways: the raw transcript, a concise human summary, and the kernel. <b>30 independent Haiku builders</b> (10 per condition) reconstruct it over a shared vocabulary; pre-registered, harness at <code>experiments/architecture-transcript/</code>.</p>
+
+    <div class="diagram"><div class="dcap">experiment 3 · <b>real architecture</b> — encoding tokens (log) × reconstruction fidelity (edge-F1); each point is the median of 10 builder runs with min–max whiskers; the kernel sits alone in the non-dominated corner</div><div id="exp3pareto"></div></div>
+    <p class="note">The kernel rebuilt the graph at <b>0.98 edge-F1</b> with <b>0 failures</b>, vs. a concise human summary at <b>0.80</b> (0 failures) and the raw transcript at <b>0.56</b> (<b>40%</b> of runs failed) — <em>complete separation</em> between kernel and prose (every kernel run beat every prose run; Mann–Whitney U = 0, p ≈ 0.0002). Even <em>careful</em> prose loses structure that the symbolic spec keeps.</p>
+    <p class="note"><b>Honest:</b> for this single architecture the kernel's <em>total</em> (547 tok, incl. its one-time 389-token definition) is larger than the prose summary (298) — the token win is the amortization story above; here the win is <b>fidelity + reliability</b>. One architecture, one builder model.</p>
+  </section>
+
+  <footer class="siteFooter">
+    <div class="col">
+      <h4>the literature</h4>
+      <p>McCarthy, Hawkins, Wang, Holdaway &amp; Fan 2021</p><p>Wong et al. 2022</p><p>Hawkins, Frank &amp; Goodman 2017</p><p>Ellis et al., PLDI 2021 (DreamCoder)</p>
+    </div>
+    <div class="col">
+      <h4>the record</h4>
+      <p>fan-comparison.md</p><p>ADR-0005 / 0005a / 0006</p><p>architecture-transcript/RESULTS.md</p><p>replicate_dyad.py</p>
+    </div>
+    <div class="col">
+      <h4>this artifact</h4>
+      <p>updated <code>2026-05-25</code></p><p>source <code>dyad-research/</code> · <code>experiments/</code></p>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+const DATA={
+  // ADR-0005 phase means — mean intent length (chars), two bucketings of the same 29 events
+  coining:{
+    phases:["bring-up","coining","invoking","shorthand"],
+    series:[
+      {key:"time-anchored cut", values:[620,2800,1600,25], color:"accent"},
+      {key:"equal-count cut",   values:[200,1331,1848,1902], color:"sky"},
+    ],
+  },
+  // abstractions-primitives reconciliation — name ↔ code resolution (count)
+  recon:[
+    {k:"aligned",n:25,c:"olive"},
+    {k:"name-ahead",n:15,c:"sky"},
+    {k:"code-ahead",n:25,c:"accent"},
+    {k:"divergent",n:0,c:"red"},
+    {k:"orphan",n:0,c:"faint"},
+  ],
+  checks:[
+    {ok:true,id:"kernel",val:"27",d:"kernel + modifiers + candidates minted 05-23"},
+    {ok:true,id:"coda",val:"12",d:"lathe rows carrying the dispatch-coda token"},
+    {ok:true,id:"pulse",val:"7·21·25",d:"operator-only / claude-only / convergent"},
+    {ok:false,id:"mine",val:"ambiguous",d:"U-shape at equal-count buckets — ADR-0005a closer"},
+  ],
+};
+
+// replication checks — a status list, not a chart
+document.getElementById("checks").innerHTML=DATA.checks.map(c=>`
+  <li><div class="row">
+    <div class="m ${c.ok?'ok':'bad'}">${c.ok?'✓':'✗'}</div>
+    <div class="id">${c.id}</div><div class="d">${c.d}</div>
+    <div class="v ${c.ok?'':'bad'}">${c.val}</div>
+  </div></li>`).join("");
+
+// ── D3 research charts (proper scales + axes + labels; re-render on theme) ──
+function palette(){
+  const cs=getComputedStyle(document.documentElement), g=n=>cs.getPropertyValue(n).trim();
+  return {accent:g('--memo-accent'),ink:g('--memo-ink'),text:g('--memo-text'),muted:g('--memo-muted'),
+    faint:g('--memo-faint'),border:g('--memo-border'),rule:g('--memo-rule'),card:g('--memo-card'),
+    olive:g('--memo-olive'),sky:g('--memo-sky'),red:g('--memo-red'),mono:g('--face-mono')};
+}
+function freshSvg(sel,W,H,P){
+  const el=document.querySelector(sel); if(!el) return null; el.innerHTML="";
+  return d3.select(el).append("svg").attr("viewBox",`0 0 ${W} ${H}`)
+    .attr("width","100%").style("height","auto").style("display","block").style("font-family",P.mono);
+}
+function styleTicks(g,P,size){
+  g.selectAll(".tick text").attr("fill",P.muted).attr("font-family",P.mono).attr("font-size",size||10);
+  g.selectAll(".domain").attr("stroke",P.border);
+  g.selectAll(".tick line").attr("stroke",P.rule);
+}
+function axisTitle(svg,x,y,t,P,rot){
+  const tx=svg.append("text").attr("x",x).attr("y",y).attr("text-anchor","middle")
+    .attr("font-size",10).attr("fill",P.faint).attr("font-family",P.mono).text(t);
+  if(rot) tx.attr("transform",`rotate(-90 ${x} ${y})`);
+}
+
+// 02 · library-size U-curve (schematic prediction + measured marker)
+function chartUcurve(P){
+  const W=680,H=300,m={t:30,r:22,b:50,l:56};
+  const svg=freshSvg("#ucurve",W,H,P); if(!svg) return;
+  const x=d3.scaleLinear().domain([0,84]).range([m.l,W-m.r]);
+  const y=d3.scaleLinear().domain([10,100]).range([H-m.b,m.t]);
+  const xc=42,c0=15,cost=v=> v<=xc ? c0+0.045*(v-xc)**2 : c0+0.040*(v-xc)**2;
+  svg.append("rect").attr("x",x(25)).attr("y",m.t).attr("width",x(60)-x(25)).attr("height",(H-m.b)-m.t)
+    .attr("fill",P.accent).attr("fill-opacity",0.08);
+  const gx=svg.append("g").attr("transform",`translate(0,${H-m.b})`)
+    .call(d3.axisBottom(x).tickValues([0,20,40,60,80]).tickSizeOuter(0)); styleTicks(gx,P);
+  const gy=svg.append("g").attr("transform",`translate(${m.l},0)`)
+    .call(d3.axisLeft(y).tickValues([15,95]).tickFormat(d=>d<50?"low":"high")); styleTicks(gy,P);
+  const pts=d3.range(0,84.1,1).map(v=>[v,cost(v)]);
+  svg.append("path").datum(pts).attr("fill","none").attr("stroke",P.text).attr("stroke-width",2)
+    .attr("d",d3.line().x(d=>x(d[0])).y(d=>y(d[1])).curve(d3.curveNatural));
+  svg.append("line").attr("x1",x(33)).attr("x2",x(33)).attr("y1",y(cost(33))).attr("y2",H-m.b)
+    .attr("stroke",P.accent).attr("stroke-width",1.2).attr("stroke-dasharray","3 3");
+  svg.append("circle").attr("cx",x(33)).attr("cy",y(cost(33))).attr("r",4).attr("fill",P.accent);
+  const lbl=(xx,yy,t,c,a,sz,w)=>svg.append("text").attr("x",xx).attr("y",yy).attr("text-anchor",a||"start")
+    .attr("font-size",sz||10).attr("font-weight",w||400).attr("fill",c).attr("font-family",P.mono).text(t);
+  lbl(x(33),y(cost(33))-12,"our kernel = 33",P.accent,"middle",11,700);
+  lbl((x(25)+x(60))/2,m.t+14,"our operating window · 25–60",P.accent,"middle",10,600);
+  lbl(m.l+4,m.t+13,"too few → re-derivation",P.muted,"start",9.5);
+  lbl(W-m.r-2,m.t+13,"too many → retrieval noise",P.muted,"end",9.5);
+  axisTitle(svg,(m.l+W-m.r)/2,H-10,"library size · named primitives",P);
+  axisTitle(svg,16,(m.t+H-m.b)/2,"description + search cost",P,true);
+}
+
+// 04·1 · coining phase means — grouped bar, two bucketings
+function chartCoining(P){
+  const W=680,H=320,m={t:22,r:20,b:74,l:62};
+  const svg=freshSvg("#coining",W,H,P); if(!svg) return;
+  const {phases,series}=DATA.coining;
+  const x0=d3.scaleBand().domain(phases).range([m.l,W-m.r]).paddingInner(0.28).paddingOuter(0.12);
+  const x1=d3.scaleBand().domain(series.map(s=>s.key)).range([0,x0.bandwidth()]).padding(0.14);
+  const y=d3.scaleLinear().domain([0,d3.max(series,s=>d3.max(s.values))]).nice().range([H-m.b,m.t]);
+  const gy=svg.append("g").attr("transform",`translate(${m.l},0)`)
+    .call(d3.axisLeft(y).ticks(5).tickSize(-(W-m.l-m.r)).tickFormat(d3.format("~s")));
+  gy.selectAll(".domain").remove();
+  gy.selectAll(".tick line").attr("stroke",P.rule).attr("stroke-dasharray","2 3");
+  gy.selectAll(".tick text").attr("fill",P.muted).attr("font-family",P.mono).attr("font-size",10);
+  phases.forEach((ph,i)=>series.forEach(s=>{
+    svg.append("rect").attr("x",x0(ph)+x1(s.key)).attr("y",y(s.values[i])).attr("width",x1.bandwidth())
+      .attr("height",(H-m.b)-y(s.values[i])).attr("fill",P[s.color]).attr("rx",2);
+    svg.append("text").attr("x",x0(ph)+x1(s.key)+x1.bandwidth()/2).attr("y",y(s.values[i])-5)
+      .attr("text-anchor","middle").attr("font-size",9.5).attr("font-weight",600).attr("fill",P[s.color])
+      .attr("font-family",P.mono).text(s.values[i]);
+  }));
+  const gx=svg.append("g").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x0).tickSizeOuter(0));
+  gx.selectAll(".domain").attr("stroke",P.border);
+  gx.selectAll(".tick line").attr("stroke",P.border);
+  gx.selectAll(".tick text").attr("fill",P.text).attr("font-family",P.mono).attr("font-size",11).attr("dy","1.2em");
+  axisTitle(svg,18,(m.t+H-m.b)/2,"mean intent length (chars)",P,true);
+  const lg=svg.append("g").attr("transform",`translate(${m.l},${H-16})`); let lx=0;
+  series.forEach(s=>{
+    lg.append("rect").attr("x",lx).attr("y",-9).attr("width",11).attr("height",11).attr("rx",2).attr("fill",P[s.color]);
+    lg.append("text").attr("x",lx+16).attr("y",0).attr("font-size",10).attr("fill",P.muted).attr("font-family",P.mono).text(s.key);
+    lx+=16+s.key.length*6.4+24;
+  });
+}
+
+// 04·3 · reconciliation — horizontal bar, abstraction counts
+function chartRecon(P){
+  const W=680,H=232,m={t:14,r:42,b:42,l:106};
+  const svg=freshSvg("#recon",W,H,P); if(!svg) return;
+  const data=DATA.recon;
+  const y=d3.scaleBand().domain(data.map(d=>d.k)).range([m.t,H-m.b]).padding(0.3);
+  const x=d3.scaleLinear().domain([0,d3.max(data,d=>d.n)]).nice().range([m.l,W-m.r]);
+  const gx=svg.append("g").attr("transform",`translate(0,${H-m.b})`)
+    .call(d3.axisBottom(x).ticks(6).tickSize(-(H-m.t-m.b)));
+  gx.selectAll(".domain").remove();
+  gx.selectAll(".tick line").attr("stroke",P.rule).attr("stroke-dasharray","2 3");
+  gx.selectAll(".tick text").attr("fill",P.muted).attr("font-family",P.mono).attr("font-size",10);
+  data.forEach(d=>{
+    svg.append("rect").attr("x",m.l).attr("y",y(d.k)).attr("width",Math.max(0,x(d.n)-m.l))
+      .attr("height",y.bandwidth()).attr("fill",P[d.c]).attr("rx",2);
+    svg.append("text").attr("x",x(d.n)+8).attr("y",y(d.k)+y.bandwidth()/2).attr("dy","0.35em")
+      .attr("font-size",11).attr("font-weight",700).attr("fill",P[d.c]).attr("font-family",P.mono).text(d.n);
+  });
+  const gy=svg.append("g").attr("transform",`translate(${m.l},0)`).call(d3.axisLeft(y).tickSize(0));
+  gy.selectAll(".domain").remove();
+  gy.selectAll(".tick text").attr("fill",P.text).attr("font-family",P.mono).attr("font-size",11).attr("dx","-4");
+  axisTitle(svg,(m.l+W-m.r)/2,H-8,"abstractions resolved (count)",P);
+}
+
+// 05·1 · amortized context cost — cumulative tokens vs towers built
+function chartCrossover(P){
+  const W=680,H=320,m={t:24,r:104,b:52,l:64};
+  const svg=freshSvg("#crossover",W,H,P); if(!svg) return;
+  const MEAN_NL=194.5, DEF=216, MEAN_K=22, Nmax=20;
+  const x=d3.scaleLinear().domain([0,Nmax]).range([m.l,W-m.r]);
+  const y=d3.scaleLinear().domain([0,MEAN_NL*Nmax]).nice().range([H-m.b,m.t]);
+  const gy=svg.append("g").attr("transform",`translate(${m.l},0)`)
+    .call(d3.axisLeft(y).ticks(5).tickSize(-(W-m.l-m.r)).tickFormat(d3.format("~s")));
+  gy.selectAll(".domain").remove();
+  gy.selectAll(".tick line").attr("stroke",P.rule).attr("stroke-dasharray","2 3");
+  gy.selectAll(".tick text").attr("fill",P.muted).attr("font-family",P.mono).attr("font-size",10);
+  const gx=svg.append("g").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(10).tickSizeOuter(0)); styleTicks(gx,P);
+  const line=d3.line().x(d=>x(d[0])).y(d=>y(d[1]));
+  const nlPts=d3.range(0,Nmax+1).map(N=>[N,MEAN_NL*N]);
+  const kPts=d3.range(0,Nmax+1).map(N=>[N,DEF+MEAN_K*N]);
+  svg.append("path").datum(nlPts).attr("fill","none").attr("stroke",P.sky).attr("stroke-width",2.2).attr("d",line);
+  svg.append("path").datum(kPts).attr("fill","none").attr("stroke",P.accent).attr("stroke-width",2.2).attr("d",line);
+  const Nbe=DEF/(MEAN_NL-MEAN_K), Ybe=MEAN_NL*Nbe;
+  svg.append("line").attr("x1",x(Nbe)).attr("x2",x(Nbe)).attr("y1",y(Ybe)).attr("y2",H-m.b).attr("stroke",P.faint).attr("stroke-dasharray","3 3");
+  svg.append("circle").attr("cx",x(Nbe)).attr("cy",y(Ybe)).attr("r",4).attr("fill",P.ink);
+  const end=(pts,txt,c)=>{const p=pts[pts.length-1];svg.append("text").attr("x",x(p[0])+6).attr("y",y(p[1])).attr("dy","0.35em").attr("font-size",11).attr("font-weight",600).attr("fill",c).attr("font-family",P.mono).text(txt);};
+  end(nlPts,"natural language",P.sky); end(kPts,"kernel",P.accent);
+  svg.append("text").attr("x",x(Nbe)+6).attr("y",m.t+14).attr("font-size",10).attr("font-weight",700).attr("fill",P.ink).attr("font-family",P.mono).text("break-even ≈ 1.3 towers");
+  svg.append("text").attr("x",x(0)+4).attr("y",y(DEF)-6).attr("font-size",9.5).attr("fill",P.muted).attr("font-family",P.mono).text("kernel def · 216 tok");
+  axisTitle(svg,(m.l+W-m.r)/2,H-10,"towers built (N)",P);
+  axisTitle(svg,16,(m.t+H-m.b)/2,"cumulative tokens consumed",P,true);
+}
+
+// 05·2 · regularity ladder — kernel vs NL tokens + concise-prose fidelity
+function chartLadder(P){
+  const W=680,H=320,m={t:40,r:24,b:64,l:58};
+  const svg=freshSvg("#ladder",W,H,P); if(!svg) return;
+  const levels=[{k:"regular",kn:12,nl:99,ok:true},{k:"semi",kn:26,nl:141,ok:true},{k:"irregular",kn:84,nl:153,ok:false}];
+  const x0=d3.scaleBand().domain(levels.map(d=>d.k)).range([m.l,W-m.r]).paddingInner(0.3).paddingOuter(0.15);
+  const x1=d3.scaleBand().domain(["kernel","nl"]).range([0,x0.bandwidth()]).padding(0.14);
+  const y=d3.scaleLinear().domain([0,160]).nice().range([H-m.b,m.t]);
+  const gy=svg.append("g").attr("transform",`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W-m.l-m.r)));
+  gy.selectAll(".domain").remove();
+  gy.selectAll(".tick line").attr("stroke",P.rule).attr("stroke-dasharray","2 3");
+  gy.selectAll(".tick text").attr("fill",P.muted).attr("font-family",P.mono).attr("font-size",10);
+  levels.forEach(L=>{
+    [["kernel",L.kn,P.accent],["nl",L.nl,P.sky]].forEach(([key,val,col])=>{
+      svg.append("rect").attr("x",x0(L.k)+x1(key)).attr("y",y(val)).attr("width",x1.bandwidth())
+        .attr("height",(H-m.b)-y(val)).attr("fill",col).attr("rx",2);
+      svg.append("text").attr("x",x0(L.k)+x1(key)+x1.bandwidth()/2).attr("y",y(val)-5).attr("text-anchor","middle")
+        .attr("font-size",10).attr("font-weight",600).attr("fill",col).attr("font-family",P.mono).text(val);
+    });
+    svg.append("text").attr("x",x0(L.k)+x0.bandwidth()/2).attr("y",m.t-18).attr("text-anchor","middle")
+      .attr("font-size",10).attr("font-weight",700).attr("fill",L.ok?P.olive:P.red).attr("font-family",P.mono)
+      .text(L.ok?"NL exact ✓":"NL broke ✗");
+  });
+  const gx=svg.append("g").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x0).tickSizeOuter(0));
+  gx.selectAll(".domain").attr("stroke",P.border); gx.selectAll(".tick line").attr("stroke",P.border);
+  gx.selectAll(".tick text").attr("fill",P.text).attr("font-family",P.mono).attr("font-size",11).attr("dy","1.2em");
+  axisTitle(svg,18,(m.t+H-m.b)/2,"tokens (o200k)",P,true);
+  const lg=svg.append("g").attr("transform",`translate(${m.l},${H-14})`); let lx=0;
+  [["kernel",P.accent],["natural language",P.sky]].forEach(([t,c])=>{
+    lg.append("rect").attr("x",lx).attr("y",-9).attr("width",11).attr("height",11).attr("rx",2).attr("fill",c);
+    lg.append("text").attr("x",lx+16).attr("y",0).attr("font-size",10).attr("fill",P.muted).attr("font-family",P.mono).text(t);
+    lx+=16+t.length*6.4+24;
+  });
+}
+
+// 06 · real architecture — encoding tokens (log) × edge-F1, 3 conditions, min–max whiskers
+function chartExp3(P){
+  const W=680,H=340,m={t:22,r:30,b:58,l:60};
+  const svg=freshSvg("#exp3pareto",W,H,P); if(!svg) return;
+  const pts=[
+    {lbl:"transcript",tok:6616,fid:0.557,lo:0.434,hi:0.713,note:"40% failed",c:P.red},
+    {lbl:"prose",tok:298,fid:0.800,lo:0.600,hi:0.839,note:"0% failed",c:P.sky},
+    {lbl:"kernel",tok:158,fid:0.979,lo:0.923,hi:0.989,note:"0% failed",c:P.accent},
+  ];
+  const x=d3.scaleLog().domain([120,9000]).range([m.l,W-m.r]);
+  const y=d3.scaleLinear().domain([0.4,1.0]).range([H-m.b,m.t]);
+  const gy=svg.append("g").attr("transform",`translate(${m.l},0)`)
+    .call(d3.axisLeft(y).tickValues([0.4,0.5,0.6,0.7,0.8,0.9,1.0]).tickFormat(d=>(d*100).toFixed(0)+"%").tickSize(-(W-m.l-m.r)));
+  gy.selectAll(".domain").remove();
+  gy.selectAll(".tick line").attr("stroke",P.rule).attr("stroke-dasharray","2 3");
+  gy.selectAll(".tick text").attr("fill",P.muted).attr("font-family",P.mono).attr("font-size",10);
+  const gx=svg.append("g").attr("transform",`translate(0,${H-m.b})`)
+    .call(d3.axisBottom(x).tickValues([158,298,1000,6616]).tickFormat(d3.format(",")));
+  gx.selectAll(".domain").attr("stroke",P.border); gx.selectAll(".tick line").attr("stroke",P.border);
+  gx.selectAll(".tick text").attr("fill",P.text).attr("font-family",P.mono).attr("font-size",10).attr("dy","1.1em");
+  const kp=pts[2];
+  svg.append("rect").attr("x",x(kp.tok)).attr("y",y(kp.fid)).attr("width",(W-m.r)-x(kp.tok)).attr("height",(H-m.b)-y(kp.fid)).attr("fill",P.accent).attr("opacity",0.06);
+  svg.append("text").attr("x",(x(kp.tok)+(W-m.r))/2).attr("y",y(0.44)).attr("text-anchor","middle").attr("font-size",9).attr("fill",P.faint).attr("font-family",P.mono).text("kernel dominates — fewer tokens AND higher fidelity");
+  pts.forEach(d=>{
+    svg.append("line").attr("x1",x(d.tok)).attr("x2",x(d.tok)).attr("y1",y(d.lo)).attr("y2",y(d.hi)).attr("stroke",d.c).attr("stroke-width",1.5).attr("opacity",0.55);
+    [d.lo,d.hi].forEach(v=>svg.append("line").attr("x1",x(d.tok)-4).attr("x2",x(d.tok)+4).attr("y1",y(v)).attr("y2",y(v)).attr("stroke",d.c).attr("stroke-width",1.5).attr("opacity",0.55));
+    svg.append("circle").attr("cx",x(d.tok)).attr("cy",y(d.fid)).attr("r",6).attr("fill",d.c).attr("stroke",P.card).attr("stroke-width",1.5);
+    const left=d.lbl==="transcript", ax=left?"end":"start", dx=left?-11:11;
+    svg.append("text").attr("x",x(d.tok)+dx).attr("y",y(d.fid)-9).attr("text-anchor",ax).attr("font-size",10.5).attr("font-weight",700).attr("fill",d.c).attr("font-family",P.mono).text(d.lbl+" "+(d.fid*100).toFixed(0)+"%");
+    svg.append("text").attr("x",x(d.tok)+dx).attr("y",y(d.fid)+3).attr("text-anchor",ax).attr("font-size",8).attr("fill",P.muted).attr("font-family",P.mono).text(d3.format(",")(d.tok)+" tok · "+d.note);
+  });
+  axisTitle(svg,(m.l+W-m.r)/2,H-8,"encoding tokens · log (lower = better)",P);
+  axisTitle(svg,16,(m.t+H-m.b)/2,"edge-F1 fidelity (higher = better)",P,true);
+}
+
+function renderCharts(){
+  if(!window.d3){
+    ["#ucurve","#coining","#recon","#crossover","#ladder","#exp3pareto"].forEach(s=>{const el=document.querySelector(s);
+      if(el) el.innerHTML='<p style="font:12px var(--face-mono);color:var(--memo-muted)">charts need d3 (network) — data is in the text above</p>';});
+    return;
+  }
+  const P=palette(); chartUcurve(P); chartCoining(P); chartRecon(P); chartCrossover(P); chartLadder(P); chartExp3(P);
+}
+
+// theme toggle (re-renders charts so they track light/dark)
+(function(){
+  const root=document.documentElement,key="cyberdeck-theme",tt=document.getElementById("tt");
+  function set(t){root.setAttribute("data-theme",t);
+    tt.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+    localStorage.setItem(key,t); renderCharts();}
+  const saved=localStorage.getItem(key); if(saved) set(saved);
+  tt.addEventListener("click",e=>{const b=e.target.closest("button");if(b)set(b.dataset.t);});
+})();
+
+renderCharts();
+</script>
+</body>
+</html>

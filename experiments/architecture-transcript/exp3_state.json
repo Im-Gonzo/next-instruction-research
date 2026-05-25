@@ -1,0 +1,659 @@
+{
+  "title": "Experiment 3 \u2014 architecture from a real transcript",
+  "source": "youtube 55pTFVoclvE \u2014 'I was laid off by Atlassian'",
+  "question": "On a real, noisy architecture description, does the kernel reconstruct the component graph more exactly at fewer tokens than the raw transcript?",
+  "tokenizer": "tiktoken \u00b7 o200k_base",
+  "stages": [
+    {
+      "id": "ingest",
+      "label": "ingest transcript",
+      "status": "done",
+      "detail": "6866 words \u00b7 8704 tokens (full) \u00b7 6616 tokens (architecture span)"
+    },
+    {
+      "id": "ground_truth",
+      "label": "ground-truth graph (validated)",
+      "status": "done",
+      "detail": "39 components \u00b7 48 relations \u2014 validated vs Excalidraw + transcript (2026-05-25)"
+    },
+    {
+      "id": "kernel_encode",
+      "label": "kernel-encode architecture",
+      "status": "done",
+      "detail": "158 tokens encoding (5 per-service sub-kernels + shared decls) + 389 tokens kernel def (one-time)"
+    },
+    {
+      "id": "builder_nl",
+      "label": "builder reconstruct from transcript",
+      "status": "done",
+      "detail": "10 Haiku runs \u00b7 transcript \u00b7 edge-F1 median 0.557"
+    },
+    {
+      "id": "builder_kernel",
+      "label": "builder reconstruct from kernel",
+      "status": "done",
+      "detail": "10 Haiku runs \u00b7 kernel \u00b7 edge-F1 median 0.979"
+    },
+    {
+      "id": "compare",
+      "label": "score fidelity + compare",
+      "status": "done",
+      "detail": "30 runs scored \u00b7 kernel 0.979 > prose 0.8 > transcript 0.557 (edge-F1 median)"
+    }
+  ],
+  "tokens": {
+    "nl_full": 8704,
+    "nl_span": 6616,
+    "kernel_encoding": 158,
+    "kernel_encoding_file": 257,
+    "kernel_by_service": {
+      "declare": 39,
+      "OSB": 21,
+      "Sovereign": 15,
+      "CloudFormation": 10,
+      "Packer": 8,
+      "Edge": 65
+    },
+    "kernel_def": 389,
+    "kernel_total": 547,
+    "ratio_span_over_kernel": 12.1,
+    "ratio_full_over_kernel": 15.9
+  },
+  "graph": {
+    "_meta": {
+      "source": "youtube 55pTFVoclvE \u2014 'I was laid off by Atlassian'",
+      "what": "Self-service edge / load-balancing platform built at Atlassian.",
+      "status": "VALIDATED 2026-05-25 \u2014 reconciled against the engineer's Excalidraw architecture diagram + the transcript narration. Semantic model (see conventions).",
+      "conventions": {
+        "model": "semantic \u2014 duplicate boxes merged (one route53, one ec2 fleet), the 3 drawn Envoys = one fleet node, container boxes that name a real service/artifact become nodes (osb, cfn, sovereign, packer) while pure groupings (Provisioning Task, Configuration) do not.",
+        "folded": "'API calls' (Provisioning Task) treated as the worker's provisioning mechanism, not a component; the Packer build-EC2 and 'AWS EC2 provisioner' boxes folded into packer\u2192ami.",
+        "kept_from_talk": "auth/authz/rate-limit sidecars and Jira/Confluence/Bitbucket/StatusPage are not in this Excalidraw but ARE declared in the talk (sidecars: ~29:46\u201330:30; products behind edge: ~22:33). Kept.",
+        "fixed_vs_candidate": "CloudFront moved out of the customer edge path into worker-provisioning (worker\u2192cloudfront); customer path is customer\u2192nlb\u2192envoy; s3\u2192context (not s3\u2192sovereign); xDS resources clusters/routes/listeners broken out of 'sovereign'; added parameters."
+      },
+      "groups": {
+        "actor": "client / customer / product / backend (external)",
+        "compute": "apps, workers, control planes",
+        "data": "queues, databases, object stores",
+        "net": "proxies, load balancers, DNS/CDN edge",
+        "infra": "cloud infra resources (CFN-provisioned)",
+        "config": "templates, context, xDS resources, config-mgmt",
+        "sidecar": "edge sidecars"
+      }
+    },
+    "nodes": [
+      {
+        "id": "client",
+        "label": "client (dev)",
+        "group": "actor"
+      },
+      {
+        "id": "customer",
+        "label": "customer",
+        "group": "actor"
+      },
+      {
+        "id": "backend",
+        "label": "backend service",
+        "group": "actor"
+      },
+      {
+        "id": "jira",
+        "label": "Jira",
+        "group": "actor"
+      },
+      {
+        "id": "confluence",
+        "label": "Confluence",
+        "group": "actor"
+      },
+      {
+        "id": "bitbucket",
+        "label": "Bitbucket",
+        "group": "actor"
+      },
+      {
+        "id": "statuspage",
+        "label": "Status Page",
+        "group": "actor"
+      },
+      {
+        "id": "osb",
+        "label": "Open Service Broker (FastAPI)",
+        "group": "compute"
+      },
+      {
+        "id": "worker",
+        "label": "provisioning worker",
+        "group": "compute"
+      },
+      {
+        "id": "sovereign",
+        "label": "Sovereign \u2014 Envoy control plane (FastAPI)",
+        "group": "compute"
+      },
+      {
+        "id": "sqs",
+        "label": "SQS",
+        "group": "data"
+      },
+      {
+        "id": "dynamo",
+        "label": "DynamoDB",
+        "group": "data"
+      },
+      {
+        "id": "s3",
+        "label": "S3 bucket (context source)",
+        "group": "data"
+      },
+      {
+        "id": "context",
+        "label": "context",
+        "group": "config"
+      },
+      {
+        "id": "templates",
+        "label": "templates",
+        "group": "config"
+      },
+      {
+        "id": "clusters",
+        "label": "Clusters (CDS)",
+        "group": "config"
+      },
+      {
+        "id": "routes",
+        "label": "Routes (RDS)",
+        "group": "config"
+      },
+      {
+        "id": "listeners",
+        "label": "Listeners (LDS)",
+        "group": "config"
+      },
+      {
+        "id": "salt",
+        "label": "SaltStack config",
+        "group": "config"
+      },
+      {
+        "id": "packer",
+        "label": "Packer",
+        "group": "config"
+      },
+      {
+        "id": "envoy",
+        "label": "Envoy proxy fleet",
+        "group": "net"
+      },
+      {
+        "id": "nlb",
+        "label": "NLB (L4)",
+        "group": "net"
+      },
+      {
+        "id": "cloudfront",
+        "label": "CloudFront",
+        "group": "net"
+      },
+      {
+        "id": "route53",
+        "label": "Route 53",
+        "group": "net"
+      },
+      {
+        "id": "cfn",
+        "label": "CloudFormation template",
+        "group": "infra"
+      },
+      {
+        "id": "parameters",
+        "label": "Parameters",
+        "group": "infra"
+      },
+      {
+        "id": "vpc",
+        "label": "VPC",
+        "group": "infra"
+      },
+      {
+        "id": "subnet",
+        "label": "subnet",
+        "group": "infra"
+      },
+      {
+        "id": "igw",
+        "label": "internet gateway",
+        "group": "infra"
+      },
+      {
+        "id": "sg",
+        "label": "security group",
+        "group": "infra"
+      },
+      {
+        "id": "asg",
+        "label": "autoscaling group",
+        "group": "infra"
+      },
+      {
+        "id": "iamrole",
+        "label": "IAM role",
+        "group": "infra"
+      },
+      {
+        "id": "keypair",
+        "label": "key pair",
+        "group": "infra"
+      },
+      {
+        "id": "acm",
+        "label": "ACM",
+        "group": "infra"
+      },
+      {
+        "id": "ec2",
+        "label": "EC2 instances",
+        "group": "infra"
+      },
+      {
+        "id": "ami",
+        "label": "AMI",
+        "group": "infra"
+      },
+      {
+        "id": "auth_sc",
+        "label": "auth sidecar (Rust)",
+        "group": "sidecar"
+      },
+      {
+        "id": "authz_sc",
+        "label": "authz sidecar",
+        "group": "sidecar"
+      },
+      {
+        "id": "rl_sc",
+        "label": "rate-limit sidecar",
+        "group": "sidecar"
+      }
+    ],
+    "edges": [
+      {
+        "from": "client",
+        "to": "osb",
+        "label": "provision / poll",
+        "kind": "req"
+      },
+      {
+        "from": "osb",
+        "to": "sqs",
+        "label": "drop task",
+        "kind": "async"
+      },
+      {
+        "from": "sqs",
+        "to": "worker",
+        "label": "task",
+        "kind": "req"
+      },
+      {
+        "from": "worker",
+        "to": "dynamo",
+        "label": "write result",
+        "kind": "data"
+      },
+      {
+        "from": "osb",
+        "to": "dynamo",
+        "label": "check status",
+        "kind": "req"
+      },
+      {
+        "from": "worker",
+        "to": "route53",
+        "label": "create DNS",
+        "kind": "prov"
+      },
+      {
+        "from": "worker",
+        "to": "cloudfront",
+        "label": "create distribution",
+        "kind": "prov"
+      },
+      {
+        "from": "sovereign",
+        "to": "osb",
+        "label": "pull service context",
+        "kind": "req"
+      },
+      {
+        "from": "s3",
+        "to": "context",
+        "label": "context source",
+        "kind": "data"
+      },
+      {
+        "from": "sovereign",
+        "to": "context",
+        "label": "builds",
+        "kind": "config"
+      },
+      {
+        "from": "sovereign",
+        "to": "templates",
+        "label": "builds",
+        "kind": "config"
+      },
+      {
+        "from": "context",
+        "to": "templates",
+        "label": "feeds",
+        "kind": "config"
+      },
+      {
+        "from": "context",
+        "to": "clusters",
+        "label": "renders",
+        "kind": "config"
+      },
+      {
+        "from": "templates",
+        "to": "routes",
+        "label": "renders",
+        "kind": "config"
+      },
+      {
+        "from": "templates",
+        "to": "listeners",
+        "label": "renders",
+        "kind": "config"
+      },
+      {
+        "from": "envoy",
+        "to": "clusters",
+        "label": "xDS (CDS)",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "routes",
+        "label": "xDS (RDS)",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "listeners",
+        "label": "xDS (LDS)",
+        "kind": "req"
+      },
+      {
+        "from": "cfn",
+        "to": "parameters",
+        "label": "defines",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "vpc",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "vpc",
+        "to": "subnet",
+        "label": "contains",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "igw",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "sg",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "keypair",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "iamrole",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "asg",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "nlb",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "acm",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "cfn",
+        "to": "route53",
+        "label": "provisions",
+        "kind": "prov"
+      },
+      {
+        "from": "asg",
+        "to": "ec2",
+        "label": "autoscales",
+        "kind": "prov"
+      },
+      {
+        "from": "asg",
+        "to": "ami",
+        "label": "launches from",
+        "kind": "ref"
+      },
+      {
+        "from": "ec2",
+        "to": "envoy",
+        "label": "runs",
+        "kind": "host"
+      },
+      {
+        "from": "salt",
+        "to": "packer",
+        "label": "config",
+        "kind": "config"
+      },
+      {
+        "from": "packer",
+        "to": "ami",
+        "label": "builds",
+        "kind": "prov"
+      },
+      {
+        "from": "ami",
+        "to": "ec2",
+        "label": "image for",
+        "kind": "ref"
+      },
+      {
+        "from": "ec2",
+        "to": "auth_sc",
+        "label": "hosts",
+        "kind": "host"
+      },
+      {
+        "from": "ec2",
+        "to": "authz_sc",
+        "label": "hosts",
+        "kind": "host"
+      },
+      {
+        "from": "ec2",
+        "to": "rl_sc",
+        "label": "hosts",
+        "kind": "host"
+      },
+      {
+        "from": "customer",
+        "to": "nlb",
+        "label": "request",
+        "kind": "req"
+      },
+      {
+        "from": "nlb",
+        "to": "envoy",
+        "label": "request",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "backend",
+        "label": "request",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "auth_sc",
+        "label": "ext authn",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "authz_sc",
+        "label": "ext authz",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "rl_sc",
+        "label": "rate limit",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "jira",
+        "label": "routes to",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "confluence",
+        "label": "routes to",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "bitbucket",
+        "label": "routes to",
+        "kind": "req"
+      },
+      {
+        "from": "envoy",
+        "to": "statuspage",
+        "label": "routes to",
+        "kind": "req"
+      }
+    ]
+  },
+  "fidelity": {
+    "transcript": {
+      "n": 10,
+      "edge_f1": {
+        "mean": 0.566,
+        "median": 0.557,
+        "sd": 0.102,
+        "min": 0.434,
+        "max": 0.713,
+        "q1": 0.476,
+        "q3": 0.657
+      },
+      "edge_iou": {
+        "mean": 0.402,
+        "median": 0.387,
+        "min": 0.277,
+        "max": 0.554
+      },
+      "node_f1": {
+        "mean": 0.934,
+        "median": 0.939
+      },
+      "failure_rate": 0.4
+    },
+    "prose": {
+      "n": 10,
+      "edge_f1": {
+        "mean": 0.761,
+        "median": 0.8,
+        "sd": 0.078,
+        "min": 0.6,
+        "max": 0.839,
+        "q1": 0.716,
+        "q3": 0.814
+      },
+      "edge_iou": {
+        "mean": 0.621,
+        "median": 0.667,
+        "min": 0.429,
+        "max": 0.722
+      },
+      "node_f1": {
+        "mean": 0.98,
+        "median": 0.98
+      },
+      "failure_rate": 0.0
+    },
+    "kernel": {
+      "n": 10,
+      "edge_f1": {
+        "mean": 0.973,
+        "median": 0.979,
+        "sd": 0.017,
+        "min": 0.923,
+        "max": 0.989,
+        "q1": 0.979,
+        "q3": 0.979
+      },
+      "edge_iou": {
+        "mean": 0.949,
+        "median": 0.959,
+        "min": 0.857,
+        "max": 0.979
+      },
+      "node_f1": {
+        "mean": 0.987,
+        "median": 0.987
+      },
+      "failure_rate": 0.0
+    }
+  },
+  "fidelity_comparisons": {
+    "kernel_vs_prose": {
+      "U": 0.0,
+      "z": -3.78,
+      "p_approx": 0.0002
+    },
+    "prose_vs_transcript": {
+      "U": 9.0,
+      "z": -3.099,
+      "p_approx": 0.0019
+    },
+    "kernel_vs_transcript": {
+      "U": 0.0,
+      "z": -3.78,
+      "p_approx": 0.0002
+    }
+  }
+}

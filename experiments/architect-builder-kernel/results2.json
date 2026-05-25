@@ -1,0 +1,64 @@
+{
+  "tokenizer": "tiktoken \u00b7 o200k_base",
+  "levels": {
+    "L1 \u00b7 regular": {
+      "kernel_tok": 12,
+      "exh_nl_tok": 99,
+      "desc_nl_tok": 72,
+      "desc_nl_fidelity": {
+        "exact": true,
+        "target": 14,
+        "got": 14,
+        "missing": 0,
+        "extra": 0,
+        "iou": 1.0
+      },
+      "kernel_fidelity": {
+        "exact": true,
+        "iou": 1.0,
+        "missing": 0,
+        "extra": 0
+      }
+    },
+    "L2 \u00b7 semi (spur)": {
+      "kernel_tok": 26,
+      "exh_nl_tok": 141,
+      "desc_nl_tok": 220,
+      "desc_nl_fidelity": {
+        "exact": true,
+        "target": 22,
+        "got": 22,
+        "missing": 0,
+        "extra": 0,
+        "iou": 1.0
+      },
+      "kernel_fidelity": {
+        "exact": true,
+        "iou": 1.0,
+        "missing": 0,
+        "extra": 0
+      }
+    },
+    "L3 \u00b7 irregular (scatter)": {
+      "kernel_tok": 84,
+      "exh_nl_tok": 153,
+      "desc_nl_tok": 159,
+      "desc_nl_fidelity": {
+        "exact": false,
+        "target": 26,
+        "got": 28,
+        "missing": 1,
+        "extra": 3,
+        "iou": 0.862
+      },
+      "kernel_fidelity": {
+        "exact": true,
+        "target": 26,
+        "got": 26,
+        "missing": 0,
+        "extra": 0,
+        "iou": 1.0
+      }
+    }
+  }
+}

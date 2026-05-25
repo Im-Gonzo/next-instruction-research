@@ -1,0 +1,740 @@
+I was recently affected by the layoffs
+made by Atlassian and I wanted to take
+some time out to reflect on the time
+that I spent working for Atlassian. I
+worked there for about 8 years. During
+that time, I built a lot of things and I
+wanted to talk about what I built,
+mainly the things that I personally
+found interesting or that I'm proud of.
+I hope that this video will be useful or
+helpful to someone who perhaps is or was
+in the same situation as me and maybe
+it'll give them some inspiration in
+terms of how they can tackle the same
+things that I did or something similar
+and perhaps avoid some of the mistakes
+that I've made. I also might talk about
+non-technical parts of my experience at
+Atassian, although most of it will be
+technical. And this video will be split
+into chapters so that you can skip to
+sections that are more interesting to
+you rather than rather than watching the
+video from start to finish. So I suppose
+to start with I'll talk about when I was
+first hired and even though I it was 8
+years ago I still remember the interview
+process which is different nowadays and
+the reason why I was hired or at least
+from my perspective the reason why I was
+hired and the things that I started
+working on during the start. So yeah,
+let's just start at the interview
+process. So I was interviewed by some
+people that I now consider friends and I
+remember having the impression while
+being interviewed that these individuals
+were quite intelligent and that was
+something that was exciting for me. The
+interview process consisted of a coding
+quiz on hacker rank which I aced with
+full marks. Then the first technical
+interview was with two interviewers and
+they gave me a white paper and asked me
+to read it while they sat out of the
+room for about 10 minutes. They came
+back in and then asked me questions
+about the white paper, asked me to
+basically articulate what was in the
+white paper and the white paper was
+actually about custom domains and the
+white paper was by Cloudflare. They then
+asked me a few questions about things
+like microservices and architectural
+things like that. um containers and and
+whatnot. And they were happy enough. I
+don't remember the rest, but they were
+happy enough with with me during that
+stage. So, I continued to the uh second
+technical interview, which was a
+troubleshooting exercise where I was
+asked to essentially prompt the
+interviewer for information in order to
+troubleshoot a a real incident that
+occurred in Alassia. And it was a it was
+an application problem that lead led to
+a denial of service. Uh so, that was
+fun. And then I think I was asked
+something about how um latency based DNS
+works and my answer was not accurate but
+perhaps acceptable. I I I thought about
+it from first principles and I thought
+that that uh for example I thought that
+route 53 did a triangulation based on
+the actual latency of the client. But it
+is more like that they use a uh they
+probably use a geoloccation database in
+order to do latency based routing of DNS
+requests of the DNS answers. Sorry. Then
+after that was a values uh interview and
+to be honest I don't really remember
+most of the questions for for the values
+portion but I do remember one thing
+which was when I asked the question of I
+asked I asked the interviewer to think
+about 12 months from now and to look
+back retrospectively what is the thing
+that I would have had to achieve in
+order to for for you to say it was a
+good decision hiring this person and
+then they told me about a an application
+that they needed to be built for the
+platform within Atlassian and the
+application would facilitate
+self-service load balancing sort of
+similar to if you were using Amazon
+application load balances or the
+equivalent in any cloud provider but for
+the internal developers of Allesia and
+it was essentially just a a framework
+that I personally was not familiar with
+and uh I said I could build it because I
+had confidence in building web apps with
+Python at that time and they accepted my
+level of confidence and decided to hire
+me. So that's the the interview portion
+completed. So I joined Atlassian and
+they have this classic saying or
+impression that when you join at Lassen
+that you are drinking from the fire hose
+because there's so much information that
+you have to absorb in the first few
+weeks and months in order to just sort
+of get going. My first my very first
+task at least the task that I gave
+myself was to build the application that
+they had told me that they wanted. Let
+me just open a browser and we'll take a
+little look see at what I mean exactly.
+Let me just uh move my face a little
+bit. There's more real estate. Now
+obviously Excalor is not what I care
+about. So they wanted me to build an
+open service broker. This is uh a a web
+app with an API which facilitates the
+provisioning of resources for a platform
+essentially. So you can you can see here
+um it's sort of built to operate in a
+Kubernetes world where you're submitting
+these provisioning requests as things
+come up and down and it's going to bind
+a resource to your pod or your cloud
+instance or whatever it is as you can
+see here. and it sort of sits in between
+these real resources. So you might
+provision something like a database and
+then you'll get MySQL. So you'll get
+something that's SQL compatible, but
+that's abstracted away for your internal
+developers. Anyhow, um the spec is uh is
+here on GitHub. You can take a look at
+it. It goes into it goes into like for
+example the catalog endpoint and the
+catalog lists all of the services and
+plans that are available on the OSP and
+uh just metadata about them and you
+might say query the the service broker
+and then display some of the metadata in
+your maybe you've got a a console a
+console like the Amazon console but
+maybe you've got something like that
+internally where developers can click
+and provision things. In the Alassian
+case, it was all through configuration
+files that were committed to um version
+control and then those would be uploaded
+uh during uploaded from a build server
+to deploy a service. Um but yeah, so you
+might have you know other APIs like uh
+provisioning here. So put and patch for
+updating and deletes and blah blah blah.
+So you would just basically go ahead and
+and implement this or I mean if you
+wanted to build your own and that is
+essentially what I did. You can see also
+there's a an open API document here that
+has the endpoints.
+So I chose to build this in in Python
+using Lask. Oh no, in fact what I what I
+built it with first is with a library
+called connection. This is a Python
+library which takes an open API document
+and then creates the API handlers for
+the paths for the API for the API routes
+that are in that document which is cool.
+But then we eventually I eventually
+migrated that to just pure Flask and
+then eventually migrated that to uh fast
+API which I believe is what it still is
+at the moment. Um, okay. So, it's the
+first two weeks and my primary focus is
+to build sort of what I promised in the
+interview, which is this web app that's
+going to be a broker for the platform
+and is going to allow self-service
+provisioning of load balancing in
+Atlassian. So, like I mentioned earlier,
+I started with this library called
+connection, which took an open API
+document, turned that into routes. But
+I'm going to just go with uh what it
+ended up as, which is a fast API app.
+Let's just say we've got fast API here,
+and then we've got uh a worker, and then
+we have a database, which was Dynamo DB.
+That's annoying. And we would have a
+client making requests. That's why
+that's the task API. The client would
+say, &quot;Hey, please provision something
+for me.&quot; And the web worker wouldn't do
+it itself. It would actually send that
+over SQS. It would drop the task details
+into SQS and the worker would then
+handle that. So, what does a
+provisioning task actually look like?
+It's something like creating DNS records
+somewhere, maybe creating a CloudFront
+distribution, maybe creating uh some API
+calls, and this would be the
+provisioning task that the worker would
+do asynchronously while the web and
+client would wait for it to be completed
+essentially. So the client's polling
+continuously to say, is it ready? Is it
+ready? When it is completed, the worker
+writes it to the database. The web
+server checks the status and then
+responds saying yes, it's finished or it
+will say that something went wrong and
+there was an error. So then we can sort
+of encapsulate this as the open service
+broker that I built. Pretty
+straightforward. Um, to be honest,
+there's not much more to this, but we're
+going to go and talk about some of the
+more complicated bits in just a second,
+and I will directly link to this as
+well. So, we've got this client
+requesting, let's say, please provision
+a load balancing, and that is
+essentially what they were asking for
+was some kind of load balancing
+somewhere in the edge infrastructure of
+Atlassian to allow traffic to go to
+their service. So that's a good uh
+demarcation point to start talking about
+the next thing that I sort of built and
+I built it through necessity of
+essentially I began to understand and
+unravel the requirements more as I went
+along. One of the architects had this
+idea to replace the load balances at
+Elassian which were enterprise load
+balances that had licensing costs with a
+open-source cloudnative sort of
+commodity proxy and the tech that we
+chose for that was proxy. You may be
+familiar with envoy proxy. If you're not
+then it's very similar to something like
+Engine X but perhaps more modern than
+Engine X. Um you can take a look at its
+you know what's what's great about it if
+you want you can just read through like
+why why choose envoy blah blah blah but
+essentially we wanted to replace the
+enterprise load balances we had make
+them self-service so that devs
+effectively didn't have to talk to us to
+go set up their load balancing so MVOY
+has an API that allows you to configure
+it dynamically being able to reload the
+configuration at runtime means that you
+can deploy deploy a whole bunch of
+proxies and have them sit there running
+all the time and then when someone needs
+different configuration for their
+particular uh service then they can push
+out a change through the provisioning
+task detailed here and those changes
+should flow to the proxy somehow and so
+now that's a good time to talk about the
+envoy management server that I built
+which we called the envoy control plane
+and this was it's essentially quite
+similar uh uh to this. Yet again, we
+used a fast API app, but this was
+slightly different actually. Let's go
+into a little bit of detail here. I'm
+just going to wing this because I should
+be able to wing it cuz I know it quite
+well. Uh this is actually a I open
+sourced this this software and I called
+it Sovereign. You can actually go find
+that on Bitbucket. It's it's a public
+repo at least for now. I don't know if
+that's going to be the case always, but
+essentially Sovereign runs a fast API
+app. And some of the things that it
+takes in as
+uh configuration are templates
+and context. And so the app uh pulls
+these uh it's obviously got like uh say
+let's just say this is the
+configuration. Okay, that's sticky now.
+So the templates might be particular
+resource types. And in envoy, you've got
+stuff like clusters, routes, listeners,
+and let's just leave it at that for the
+moment. You'd have these kinds of
+templates. And so when this when this
+management server loads up, it'll read
+in these templates in the context and
+make these available as APIs for the uh
+proxies. So then you can imagine let's
+just say we've got uh an envoy here. It
+is going to request these things and
+sovereign is going to respond by taking
+the context putting it into the
+templates and rendering out different
+content u as the context changes. Now
+where does the context come from? Well
+this is part of this management server
+that is dynamic. So where let's just uh
+let's just do a bit of flip around here.
+put the context here. The context
+actually comes from this database, but
+we are requesting it from the broker. So
+the we're requesting data from the
+broker and other sources. In fact, let's
+just add another source here. Let's just
+say we have a little S3 bucket with some
+data and maybe that data is changing
+over time. So we take that data, it's
+dynamic, we feed that into the
+templates. the the templates have logic
+that spits out particular envoy
+configuration and then the proxy changes
+over time. So what happens is we've got
+a client that's making provisioning
+requests to our broker. The worker is
+doing some provisioning tasks and then
+writing the new data to the database.
+Then the the management server say pop
+this just encapsulate this a little bit.
+The management server is then pulling
+that data from various places and
+generating new configuration. That
+configuration hits the proxy and then it
+starts doing different stuff. That is
+essentially the second part of what I
+built. We've got a broker, we've got a
+management server, we got the client, we
+got the proxy. Uh why did this detach?
+Anyway, so now we've sort of figured
+this stuff out. This is all at a very
+high level. So we've got this created.
+Now we can sort of think more about more
+infrastructure type things. We've got
+this proxy, but how do we end up with
+this proxy? How does that actually get
+provisioned? What is it? Where does it
+live? Well, let's start with one thing,
+which is that these proxies,
+there's many many many of them as you
+would expect and they are provisioned by
+um they are provisioned by a cloud
+formation template. This is an AWS thing
+that allows you to essentially do
+infrastructure as code and it allows you
+to create resources in in AWS that you
+would normally create via the console if
+you were just uh let's say a a basic
+user. So what kind of stuff do we create
+in here? Well, if we were to do this
+stuff from scratch, we'd probably have
+like a VPC and then we'd have uh, you
+know, a subnet inside that VPC and maybe
+we'd have an internet gateway. Maybe
+we'd have uh uh good old security group.
+Maybe we'd have a key pair. Maybe an AM
+roll. Um, oh, of course, we need to have
+the autoscaling group. Of course, that's
+what's going to be uh creating these uh
+EC2 instances.
+And well, the autoscaling group needs
+an AMI, doesn't it? Indeed, it does need
+an AMI. AM RO has to be attached to um
+has to be attached to all these. The key
+pair goes on on these. Security group is
+attached to the this. Well, it's
+probably attached to the auto scanning
+group to be fair. Well, the EC2
+instances would inherit it from the from
+the ASG blah blah blah. So, we've got
+all these like uh blocks of resources
+and stuff like that. Cool. Let's let's
+put these up. Put these up together.
+Blah blah blah. Cool. So, yeah, we've
+kind of got like a little template going
+on here and it's creating these proxies
+in many different regions. Uh we might
+have we might have like uh NLB in here,
+layer 4 proxy. Maybe we'd have uh bit of
+maybe a bit of ACM. Of course, these
+acronyms might mean nothing to some
+people, but for people that have used
+AWS, they would know what these things
+are. And they know it's not really that
+complicated. It's like pretty basic
+building blocks. And this is what we
+created. Uh say 2,000 proxies, something
+like 13 regions, blah blah blah. Um and
+we also had a little bit of Route 53
+records for for stuff. Now the AMI, it's
+not really provisioned by the the
+template. It's more like it's referenced
+by the template, isn't it? So that would
+bring us on to the next piece of this
+thing that I built, which is well, we
+need to produce an AMI. We need to
+produce a standard image for these
+proxies and it's going to include all
+the important stuff in there. So how do
+we create this image for the proxy?
+Well, in this case, we had a repository
+that was using Hashi called packer and
+uh we had um a salt stack uh let's call
+it configuration and so we would use
+packer to um let's say we'd have the EC
+we'd use the EC2 provisioner and so we
+would create an EC2 in like a dev
+account. We'd then upload all of our
+salt stack configuration. Consult stack
+by the way is very similar to puppet
+anible chef in case you're not aware of
+what those are. It is configuration
+management tools and that's a fancy way
+of saying that I want to run I want to
+install packages put files and run
+services on a machine in a particular
+way in a particular order and it
+automates that process makes that
+process declarative for you well not for
+you but it helps you to to make it
+declarative. So we created a little um
+create a little EC2 live running EC2
+here. We dump the config on there. We do
+a provisioning step and then we take the
+uh essentially turn this into an image
+like cut it down uh whatever snapshot it
+and turn it into an image. So that
+essentially would just produce this uh
+AMI. Now what was included in here?
+Let's let's say we can just uh we can
+include a few things here. Let's just
+say we had um we had states for for
+envoy. So like let's say install
+configure uh let's say just install and
+configure envoy uh logging agent um
+security uh let's say /h hardening
+network tuning um containers uh tracing
+oh let's just say let's just say uh
+observability agent there and that can
+cover that can cover logging tracing
+metrics so that's essentially what's
+going on here produces the AMI
+cloudformation template takes this AMI
+provision provisions these EC2s say EC2
+and they're running with uh all this
+stuff and then when they uh when they
+get provisioned uh that's something that
+we forgot here there's parameters
+parameters bump that up bump this up
+make it neat so we've got the parameters
+and these at uh uh runtime would pass in
+secrets and keys and blah blah blah and
+then these these proxies would grab
+their resources be configured and then
+they would be running and accepting
+traffic. Boom. That's it. Everything's
+done working. This was essentially the
+first two years of working at Atlassian.
+So now when a developer says, I want to
+run my service and I want it to be uh I
+want it to be accessible on the internet
+with all the fancy bells and whistles
+and routing and advanced stuff. We'd say
+yes, no problem. Let me just get that
+provisioned for you. We send off the
+provisioning task. We write something to
+the database. We tell them it's ready.
+and the management server hits the uh
+broker says what's the current state of
+things takes that data plus other data
+puts it into the templates creates
+resources out of those templates gives
+them to envoy on when it requests them
+and this was all pre uh provisioned it's
+long lived infrastructure with cloud for
+the cloudformation is relying on an AMI
+that it can use to provision those
+images those machines so yeah that is
+probably the first 24 months. So what
+was next after this? So this was the
+foundation of our team essentially the
+product that we were going forward with
+um which is uh centralized load
+balancing managed by our team and all of
+the features that we provided to our
+customers would live in logic defined in
+these templates. We've now laid the
+foundation for the team. We've got proxy
+infrastructure that's reacting
+dynamically to services that are being
+deployed with different configurations
+over time. What was next after that
+point? The big thing after that was
+taking some of the larger products and
+making it possible for them to use this
+platform component. That was one big
+part. And the second big part was
+migrating all of the microservices
+within Atlassian to use this. And that
+was relatively easier because we could
+enforce that through the platform.
+Essentially what that means is that the
+platform was previously providing very
+basic load balancing to every service
+and they forced a switch to where you
+could no longer expose your service
+publicly through their load balancer
+which was too basic and you had to go
+through our centralized load balancing
+infrastructure and to explicitly
+configure it as a way of signaling your
+intention for that service to be
+publicly accessible. Whereas previous it
+could have just been maybe accidental
+that your service was public and not
+very well protected. So that was the big
+major push. We got products like Jira,
+Confluence, Bitbucket, Status Page and
+many others behind this edge
+infrastructure. And then what was after
+that? Well, now we can sort of talk more
+about let's say we can talk more about
+the uh the MVO based product that we had
+here. So this particular thing we've got
+this groundwork of being able to take
+basic inputs from a developer and to
+turn that into templated configuration.
+Now Envoy has a lot of configuration. It
+has a lot of stuff you can configure.
+Let's just look at the routes for
+example. Let's look at the virtual host
+for example. You can configure what
+domains to accept traffic on. Pretty
+basic. You can do routing. sort of
+basic, but once you delve into how you
+can do this, it gets pretty complicated
+pretty quickly. You can match on
+different things. You can route it in
+different ways. You can do direct
+responses, you can do redirects, blah
+blah blah. You can add and remove
+headers. I guess I guess you could say
+that's pretty standard. But you can also
+choose, for example, when you're
+configuring a route action, you can also
+choose to send to any cluster that's on
+the proxy. So then if I have a thousand
+devs or a thousand services and they
+each have their own cluster and any
+route can send to any cluster. Well, it
+sort of brings up this point of well
+this data here needs to be validating
+that and abstracting that and so on and
+so forth. So there was definitely a
+concentration of a lot of the
+development work around this logic here.
+Making sure it was validated here in
+terms of the parameters were validated
+such that when those parameters were run
+through the logic in this in these
+resources that it would produce valid
+resources. Pretty standard I suppose you
+could say. I don't know maybe I I do
+feel like I have the curse of knowledge.
+Um and that this stuff seems easier to
+me now because I I've done so much with
+it. Uh but there's a lot there's a lot
+in here. And if we go into uh for
+example extensions, there's a lot of
+extensions that can be applied to a
+listener or a or a cluster. For example,
+you might have uh where is it? You've
+got uh network filters here. You've got
+all kinds of network filters. And a big
+one that we obviously used was a HTTP
+connection manager where you could
+configure routing and how to handle
+proxies and websockets and all this
+stuff. And then if we go a little bit
+before that, there's also things like
+external processing and external
+authorization. And this sort of brings
+us to let's say something that happened
+next. So I did briefly mention that some
+of the big parts after building this was
+to migrate big products onto it. Let's
+assume that's all finished. It took it
+took some time. It took probably a
+couple years because there were many
+features that needed to be built out
+here and and wherever else in order to
+support the larger products and their
+special cases to work on what's
+effectively a generic multi-tenented
+platform. So let's just assume that
+they're all migrated. Then we have more
+features that we want to add. I did sort
+of allude to like we have this we have
+this groundwork. we have this dynamic
+configuration. What I'm trying to say is
+that we we created opportunity we
+created opportunity to centralize logic
+and to handle concerns early in the
+chain of requests. What I mean by that
+is a customer. Let's just make a c
+smiley customer. A customer is someone
+that's using our cloud products or
+Atlassian cloud products. they are
+hitting the uh let's just say they're
+hitting an NLB first and that's then
+being proxied to these boys. Yes, if we
+can deal with the problems here before
+they reach a service. Let's say let's
+give a square. Let's call it a backend
+service, you know. So, the requests are
+flowing in from the customer to the
+proxies and to the pretty standard
+stuff. If we can deal with certain
+concerns here before it reaches here, we
+save a lot of time. We save some money
+which is and it saves the customer time.
+It's great for everyone really. Um, and
+one of those things, now this is where
+the the diagram becomes complicated. So,
+let's move off to the side. Let's just
+copy a few of these. Let's grab three
+things and let's move over to the side.
+So, we've got the customer talking to
+the proxy and the proxy is talking to
+the back end. And of course, the request
+comes back up and back out to the
+customer. Fine and dandy. Yes, this is a
+this is a proxy. Whatever. There's no
+surprises here. Now with our with with
+the products that Atlassian runs,
+there's all kinds of stuff that needs to
+happen like authentication for example
+or authorization or uh DOS protection or
+rate limiting or access logs all this
+kinds of stuff that needs to happen. And
+it's just turns out that we can deal
+with them here instead of on a bazillion
+bazillion backend services. Just imagine
+that there are a bazillion bazillion of
+these. Just zillions upon zillions. See
+daisy. Just zillions and zillions. A
+gazillion. Now, can you imagine if a
+thousand dev teams needed to deal with
+all this stuff plus more on their own
+service? It would be a tremendous waste
+of money for the company. It would slow
+down features. The customer wouldn't get
+their features when they need them. and
+stuff is already hard enough to deliver
+as it is. Thus the platform and
+centralized management of resources and
+centralized uh implementation of these
+features. So how how were some of these
+things implemented? Well, EOS protection
+was really provided by uh CloudFront and
+that was that was uh spearheaded by a
+colleague of mine who is very smart and
+conscientious and essentially let's make
+this a bit more accurate. Let's just say
+let's get rid of these. There's an NLB
+here. Blah blah blah blah blah blah. And
+of course, it's two-way. So, that's one
+way that we can take care of that
+concern for these backend services.
+Great. We've solved solved a concern for
+that. Fantastic. These others, well,
+access logs, what we can do is something
+like we can use these network filters.
+Yes, we use the network filters. For
+example, in the HCM, we have
+Where are the access logs? Access log.
+Now remember all of this configuration
+is dynamic. It's all dynamic and it is
+created by templates which abstract away
+the resource configuration from the
+developer who wants to configure it.
+They provide simple parameters. Those
+parameters are then validated and then
+they are fed into the template as
+context so that we produce the correct
+template. That means that they send us a
+little bit of JSON and we set up this
+whole thing for them with all the access
+logging and blah blah blah whatever. So
+that is done in fact inside the proxy
+natively. Fantastic. Some of these
+things however a little bit more
+complicated. These things we need to use
+a sidecar model where envoy is talking
+out the side and then these are their
+own services running locally on the on
+the proxy. So these would be like uh
+containers essentially. We've got this
+sidecar model and those sidecars some of
+them were contributed by other teams and
+some of them were created by me and our
+team. The authentication and the
+authentication sidec was created by me
+written of course in the lord's language
+rust authorization was done by another
+team and rate limiting was done by
+another team and so they were able to
+contribute these sidecars which by the
+way were set up and uh were downloaded
+and configured onto the AMI by this
+provisioning uh AMI provisioning flow.
+Great. So now we have a programmable
+proxy with sidec cars that have their
+own separate logic from the proxy and
+they too can actually receive
+configuration which is dynamic over the
+wire locally and uh and make it even
+more programmable. So we're solving all
+these concerns before they hit these uh
+these backends and in very very little
+time. So that was uh essentially that is
+some of the stuff I worked on after
+migrations and blah blah blah. Yay. What
+do I do after that? Let's move this big
+blob rid of this mess. So then we had
+some 

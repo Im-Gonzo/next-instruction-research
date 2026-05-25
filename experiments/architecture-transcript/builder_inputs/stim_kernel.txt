@@ -1,0 +1,54 @@
+KERNEL — a shared architecture vocabulary (defined once, reused for every system).
+Nodes are `id:type "label"`. Edges: a->b (request/flow), a~>b (async via queue),
+a=>b (provisions/creates), a:>b (config flow), a^b (hosts/runs), a&b (references).
+Types: client, api, worker, queue, db, store, ctrl, proxy, lb, edge, svc, infra, cfg, sidecar.
+
+PATTERNS (macros that expand to subgraphs):
+  async_broker(api,queue,worker,db):
+    client->api ; api~>queue ; queue->worker ; worker->db ; api->db
+  control_plane(ctrl,proxy,store,broker):   # Envoy xDS plane
+    ctrl->broker(pull context) ; store->context
+    ctrl:>context ; ctrl:>templates ; context:>templates
+    context=>clusters ; templates=>routes ; templates=>listeners
+    proxy->clusters ; proxy->routes ; proxy->listeners   (xDS: CDS/RDS/LDS)
+  proxy_fleet(cfn,ami,proxy):
+    cfn=>{parameters,vpc,igw,sg,keypair,iamrole,asg,nlb,acm,route53} ; vpc=>subnet
+    asg=>ec2 ; asg&ami ; ec2^proxy
+  image_pipeline(cfgtool,builder)=>ami:
+    cfg:>builder ; builder=>ami ; ami&ec2
+  edge_chain(client,...hops...,svc; [front]):
+    client->front->...->svc (each hop forwards)
+  sidecar(proxy,name,lang,owner):
+    proxy->name(ext) ; ec2^name
+  behind_edge(proxy,[svcs...]):
+    proxy->each svc
+
+===== ENCODING (this architecture) =====
+
+# Atlassian edge platform — kernel encoding, categorized by service.
+# Expands to the locked ground-truth graph (39 nodes / 48 edges).
+# Each service is its own small sub-kernel; the architecture is their sum.
+
+# == declare ==
+osb:api "Open Service Broker"   worker:worker   sovereign:ctrl "Sovereign"
+envoy:proxy   customer:client   backend:svc   s3:store
+
+# == OSB ==        (Open Service Broker)
+async_broker(osb, sqs, worker, dynamo)
+worker => route53, cloudfront
+
+# == Sovereign ==  (Envoy xDS control plane)
+control_plane(sovereign, envoy, s3, osb)
+
+# == CloudFormation ==
+proxy_fleet(cfn, ami, envoy)
+
+# == Packer ==     (image pipeline)
+image_pipeline(salt, packer)
+
+# == Edge ==
+edge_chain(customer, nlb, envoy, backend)
+sidecar(envoy, auth_sc, rust, me)
+sidecar(envoy, authz_sc, -, teamB)
+sidecar(envoy, rl_sc, -, teamC)
+behind_edge(envoy, [jira, confluence, bitbucket, statuspage])

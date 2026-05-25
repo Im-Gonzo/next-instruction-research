@@ -1,0 +1,373 @@
+{
+  "metric": "edge-F1 (primary); failure = edge-F1 < 0.50",
+  "ground_truth": {
+    "nodes": 39,
+    "edges": 48
+  },
+  "conditions": {
+    "transcript": {
+      "n": 10,
+      "edge_f1": {
+        "mean": 0.566,
+        "median": 0.557,
+        "sd": 0.102,
+        "min": 0.434,
+        "max": 0.713,
+        "q1": 0.476,
+        "q3": 0.657
+      },
+      "edge_iou": {
+        "mean": 0.402,
+        "median": 0.387,
+        "min": 0.277,
+        "max": 0.554
+      },
+      "node_f1": {
+        "mean": 0.934,
+        "median": 0.939
+      },
+      "failure_rate": 0.4
+    },
+    "prose": {
+      "n": 10,
+      "edge_f1": {
+        "mean": 0.761,
+        "median": 0.8,
+        "sd": 0.078,
+        "min": 0.6,
+        "max": 0.839,
+        "q1": 0.716,
+        "q3": 0.814
+      },
+      "edge_iou": {
+        "mean": 0.621,
+        "median": 0.667,
+        "min": 0.429,
+        "max": 0.722
+      },
+      "node_f1": {
+        "mean": 0.98,
+        "median": 0.98
+      },
+      "failure_rate": 0.0
+    },
+    "kernel": {
+      "n": 10,
+      "edge_f1": {
+        "mean": 0.973,
+        "median": 0.979,
+        "sd": 0.017,
+        "min": 0.923,
+        "max": 0.989,
+        "q1": 0.979,
+        "q3": 0.979
+      },
+      "edge_iou": {
+        "mean": 0.949,
+        "median": 0.959,
+        "min": 0.857,
+        "max": 0.979
+      },
+      "node_f1": {
+        "mean": 0.987,
+        "median": 0.987
+      },
+      "failure_rate": 0.0
+    }
+  },
+  "comparisons": {
+    "kernel_vs_prose": {
+      "U": 0.0,
+      "z": -3.78,
+      "p_approx": 0.0002
+    },
+    "prose_vs_transcript": {
+      "U": 9.0,
+      "z": -3.099,
+      "p_approx": 0.0019
+    },
+    "kernel_vs_transcript": {
+      "U": 0.0,
+      "z": -3.78,
+      "p_approx": 0.0002
+    }
+  },
+  "per_run": {
+    "transcript": [
+      {
+        "run": "t1",
+        "edge_f1": 0.705,
+        "edge_iou": 0.544,
+        "edge_p": 0.775,
+        "edge_r": 0.646,
+        "node_f1": 0.886,
+        "node_iou": 0.795
+      },
+      {
+        "run": "t2",
+        "edge_f1": 0.488,
+        "edge_iou": 0.323,
+        "edge_p": 0.588,
+        "edge_r": 0.417,
+        "node_f1": 0.917,
+        "node_iou": 0.846
+      },
+      {
+        "run": "t3",
+        "edge_f1": 0.713,
+        "edge_iou": 0.554,
+        "edge_p": 0.795,
+        "edge_r": 0.646,
+        "node_f1": 0.946,
+        "node_iou": 0.897
+      },
+      {
+        "run": "t4",
+        "edge_f1": 0.582,
+        "edge_iou": 0.411,
+        "edge_p": 0.742,
+        "edge_r": 0.479,
+        "node_f1": 0.886,
+        "node_iou": 0.795
+      },
+      {
+        "run": "t5",
+        "edge_f1": 0.627,
+        "edge_iou": 0.456,
+        "edge_p": 0.743,
+        "edge_r": 0.542,
+        "node_f1": 0.932,
+        "node_iou": 0.872
+      },
+      {
+        "run": "t6",
+        "edge_f1": 0.442,
+        "edge_iou": 0.284,
+        "edge_p": 0.5,
+        "edge_r": 0.396,
+        "node_f1": 0.946,
+        "node_iou": 0.897
+      },
+      {
+        "run": "t7",
+        "edge_f1": 0.533,
+        "edge_iou": 0.364,
+        "edge_p": 0.571,
+        "edge_r": 0.5,
+        "node_f1": 0.946,
+        "node_iou": 0.897
+      },
+      {
+        "run": "t8",
+        "edge_f1": 0.667,
+        "edge_iou": 0.5,
+        "edge_p": 0.714,
+        "edge_r": 0.625,
+        "node_f1": 0.946,
+        "node_iou": 0.897
+      },
+      {
+        "run": "t9",
+        "edge_f1": 0.472,
+        "edge_iou": 0.309,
+        "edge_p": 0.512,
+        "edge_r": 0.438,
+        "node_f1": 1.0,
+        "node_iou": 1.0
+      },
+      {
+        "run": "t10",
+        "edge_f1": 0.434,
+        "edge_iou": 0.277,
+        "edge_p": 0.514,
+        "edge_r": 0.375,
+        "node_f1": 0.932,
+        "node_iou": 0.872
+      }
+    ],
+    "prose": [
+      {
+        "run": "p1",
+        "edge_f1": 0.779,
+        "edge_iou": 0.638,
+        "edge_p": 0.787,
+        "edge_r": 0.771,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "p2",
+        "edge_f1": 0.796,
+        "edge_iou": 0.661,
+        "edge_p": 0.822,
+        "edge_r": 0.771,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "p3",
+        "edge_f1": 0.6,
+        "edge_iou": 0.429,
+        "edge_p": 0.577,
+        "edge_r": 0.625,
+        "node_f1": 0.974,
+        "node_iou": 0.949
+      },
+      {
+        "run": "p4",
+        "edge_f1": 0.826,
+        "edge_iou": 0.704,
+        "edge_p": 0.864,
+        "edge_r": 0.792,
+        "node_f1": 0.974,
+        "node_iou": 0.949
+      },
+      {
+        "run": "p5",
+        "edge_f1": 0.804,
+        "edge_iou": 0.673,
+        "edge_p": 0.841,
+        "edge_r": 0.771,
+        "node_f1": 0.974,
+        "node_iou": 0.949
+      },
+      {
+        "run": "p6",
+        "edge_f1": 0.839,
+        "edge_iou": 0.722,
+        "edge_p": 0.867,
+        "edge_r": 0.812,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "p7",
+        "edge_f1": 0.653,
+        "edge_iou": 0.485,
+        "edge_p": 0.64,
+        "edge_r": 0.667,
+        "node_f1": 0.974,
+        "node_iou": 0.949
+      },
+      {
+        "run": "p8",
+        "edge_f1": 0.695,
+        "edge_iou": 0.532,
+        "edge_p": 0.702,
+        "edge_r": 0.688,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "p9",
+        "edge_f1": 0.804,
+        "edge_iou": 0.673,
+        "edge_p": 0.841,
+        "edge_r": 0.771,
+        "node_f1": 0.974,
+        "node_iou": 0.949
+      },
+      {
+        "run": "p10",
+        "edge_f1": 0.817,
+        "edge_iou": 0.691,
+        "edge_p": 0.844,
+        "edge_r": 0.792,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      }
+    ],
+    "kernel": [
+      {
+        "run": "k1",
+        "edge_f1": 0.979,
+        "edge_iou": 0.959,
+        "edge_p": 0.979,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k2",
+        "edge_f1": 0.968,
+        "edge_iou": 0.939,
+        "edge_p": 0.979,
+        "edge_r": 0.958,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k3",
+        "edge_f1": 0.923,
+        "edge_iou": 0.857,
+        "edge_p": 0.977,
+        "edge_r": 0.875,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k4",
+        "edge_f1": 0.989,
+        "edge_iou": 0.979,
+        "edge_p": 1.0,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k5",
+        "edge_f1": 0.979,
+        "edge_iou": 0.959,
+        "edge_p": 0.979,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k6",
+        "edge_f1": 0.979,
+        "edge_iou": 0.959,
+        "edge_p": 0.979,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k7",
+        "edge_f1": 0.979,
+        "edge_iou": 0.959,
+        "edge_p": 0.979,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k8",
+        "edge_f1": 0.979,
+        "edge_iou": 0.959,
+        "edge_p": 0.979,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k9",
+        "edge_f1": 0.979,
+        "edge_iou": 0.959,
+        "edge_p": 0.979,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      },
+      {
+        "run": "k10",
+        "edge_f1": 0.979,
+        "edge_iou": 0.959,
+        "edge_p": 0.979,
+        "edge_r": 0.979,
+        "node_f1": 0.987,
+        "node_iou": 0.974
+      }
+    ]
+  }
+}

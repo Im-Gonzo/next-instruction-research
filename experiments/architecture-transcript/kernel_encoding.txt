@@ -1,0 +1,27 @@
+# Atlassian edge platform — kernel encoding, categorized by service.
+# Expands to the locked ground-truth graph (39 nodes / 48 edges).
+# Each service is its own small sub-kernel; the architecture is their sum.
+
+# == declare ==
+osb:api "Open Service Broker"   worker:worker   sovereign:ctrl "Sovereign"
+envoy:proxy   customer:client   backend:svc   s3:store
+
+# == OSB ==        (Open Service Broker)
+async_broker(osb, sqs, worker, dynamo)
+worker => route53, cloudfront
+
+# == Sovereign ==  (Envoy xDS control plane)
+control_plane(sovereign, envoy, s3, osb)
+
+# == CloudFormation ==
+proxy_fleet(cfn, ami, envoy)
+
+# == Packer ==     (image pipeline)
+image_pipeline(salt, packer)
+
+# == Edge ==
+edge_chain(customer, nlb, envoy, backend)
+sidecar(envoy, auth_sc, rust, me)
+sidecar(envoy, authz_sc, -, teamB)
+sidecar(envoy, rl_sc, -, teamC)
+behind_edge(envoy, [jira, confluence, bitbucket, statuspage])

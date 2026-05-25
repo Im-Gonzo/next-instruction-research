@@ -1,0 +1,1932 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>the interface is the next instruction — case study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500;1,6..72,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+<style>
+/* ── memo design tokens ─────────────────────────────────── */
+:root{
+  --memo-bg:#FAF8F5;--memo-bg-deep:#F3EFE7;--memo-surface:#F0EDE8;--memo-card:#FFFFFF;
+  --memo-border:#D4CFC7;--memo-rule:#E6E0D5;--memo-text:#2C2825;--memo-ink:#141413;
+  --memo-muted:#8A837A;--memo-faint:#B7B0A4;
+  --memo-accent:#B8602A;--memo-olive:#788C5D;--memo-sky:#6A8CAF;--memo-red:#C04A3E;--memo-amber:#C49B4A;
+  --memo-shadow-1:0 1px 0 rgba(20,20,19,.03),0 8px 24px rgba(20,20,19,.04);
+  --memo-shadow-2:0 1px 0 rgba(20,20,19,.04),0 12px 32px rgba(20,20,19,.06);
+  --face-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --face-serif:"Newsreader","Iowan Old Style",Georgia,serif;
+  --ease:cubic-bezier(.4,0,.2,1);--motion:220ms;
+}
+:root[data-theme="dark"]{
+  --memo-bg:#141413;--memo-bg-deep:#1A1614;--memo-surface:#1F1A14;--memo-card:#1A1614;
+  --memo-border:#3A342D;--memo-rule:#2D2823;--memo-text:#E6E0D5;--memo-ink:#FAF8F5;
+  --memo-muted:#B7B0A4;--memo-faint:#8A837A;
+  --memo-accent:#D4793C;--memo-olive:#9BB37A;--memo-sky:#8AAECF;--memo-red:#E07A6A;--memo-amber:#D4B670;
+  --memo-shadow-1:0 1px 0 rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  --memo-shadow-2:0 1px 0 rgba(0,0,0,.5),0 12px 32px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--memo-bg);color:var(--memo-text);
+  transition:background-color var(--motion) var(--ease),color var(--motion) var(--ease);
+  font:400 14px/1.6 var(--face-mono);-webkit-font-smoothing:antialiased;overflow:hidden;}
+code{font:inherit;color:var(--memo-accent);}
+em{font-style:italic;}
+a{color:var(--memo-accent);text-decoration:none;border-bottom:1px solid var(--memo-border);}
+a:hover{border-color:var(--memo-accent);}
+mark{background:color-mix(in srgb,var(--memo-red) 18%,transparent);color:var(--memo-ink);padding:0 3px;border-radius:2px;}
+
+/* ── deck ─────────────────────────────────────────────── */
+.deck{display:flex;height:100vh;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;}
+.deck::-webkit-scrollbar{display:none;}
+.slide{flex:0 0 100vw;height:100vh;scroll-snap-align:center;
+  display:grid;align-content:center;
+  padding:9vh clamp(36px,9vw,148px);position:relative;overflow:hidden;}
+
+/* ── type scale ───────────────────────────────────────── */
+.kicker{font:600 11px/1 var(--face-mono);color:var(--memo-accent);text-transform:uppercase;
+  letter-spacing:.22em;margin-bottom:22px;}
+.snum{font:500 12px/1 var(--face-mono);color:var(--memo-faint);letter-spacing:.16em;margin-bottom:20px;}
+.snum b{color:var(--memo-accent);}
+.slide h1{font:700 clamp(32px,4.8vw,70px)/1.03 var(--face-serif);color:var(--memo-ink);
+  letter-spacing:-.02em;max-width:22ch;margin-bottom:24px;}
+.slide h1 em{color:var(--memo-accent);font-weight:600;}
+.lead{font:400 clamp(14px,1.4vw,18px)/1.65 var(--face-mono);color:var(--memo-text);max-width:64ch;}
+.lead.serif{font-family:var(--face-serif);font-size:clamp(16px,1.6vw,21px);}
+.lead b{color:var(--memo-ink);font-weight:600;}
+.lead+.lead{margin-top:14px;}
+.body{font:400 clamp(13px,1.2vw,15.5px)/1.68 var(--face-mono);color:var(--memo-text);max-width:64ch;}
+.body b{color:var(--memo-ink);font-weight:600;}
+.body+.body{margin-top:13px;}
+.cap{font:400 13px/1.6 var(--face-mono);color:var(--memo-muted);max-width:62ch;}
+.cap b{color:var(--memo-ink);}
+.aph{font:400 italic clamp(17px,1.8vw,24px)/1.48 var(--face-serif);color:var(--memo-ink);max-width:28ch;}
+
+/* ── layout helpers ──────────────────────────────────── */
+.row{display:flex;gap:clamp(28px,4vw,64px);align-items:flex-start;flex-wrap:wrap;}
+.col-txt{flex:1 1 300px;min-width:260px;max-width:520px;}
+.col-viz{flex:1 1 380px;min-width:280px;}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,3vw,48px);}
+.mt16{margin-top:16px;}.mt20{margin-top:20px;}.mt24{margin-top:24px;}.mt30{margin-top:30px;}
+
+/* ── chips ───────────────────────────────────────────── */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px;}
+.chip{font:500 10.5px/1 var(--face-mono);color:var(--memo-muted);border:1px solid var(--memo-border);
+  border-radius:999px;padding:6px 13px;text-transform:uppercase;letter-spacing:.08em;}
+.chip b{color:var(--memo-ink);}
+
+/* ── stat blocks ─────────────────────────────────────── */
+.stats{display:flex;gap:28px;flex-wrap:wrap;margin-top:24px;}
+.stat .v{font:700 clamp(28px,3.2vw,50px)/1 var(--face-serif);color:var(--memo-accent);}
+.stat .k{font:500 10.5px/1.4 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.1em;margin-top:7px;}
+
+/* ── vizcard ─────────────────────────────────────────── */
+.vizcard{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:12px;
+  box-shadow:var(--memo-shadow-1);padding:16px 18px;}
+.vizcard svg{display:block;width:100%;height:auto;}
+.dcap{font:500 10px/1.3 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;
+  letter-spacing:.1em;margin-bottom:11px;}
+.dcap b{color:var(--memo-ink);}
+
+/* ── noun cards ──────────────────────────────────────── */
+.nouns{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:20px;max-width:640px;}
+.noun{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:10px;
+  box-shadow:var(--memo-shadow-1);padding:16px 18px;}
+.noun .w{font:600 18px/1 var(--face-serif);color:var(--memo-faint);
+  text-decoration:line-through;text-decoration-color:var(--memo-accent);
+  text-decoration-thickness:1.5px;margin-bottom:10px;}
+.noun .why{font:400 12px/1.5 var(--face-mono);color:var(--memo-text);}
+.noun .why b{color:var(--memo-ink);}
+.noun .no{display:block;margin-top:7px;font:400 italic 12px/1.4 var(--face-serif);color:var(--memo-muted);}
+.resolve{background:var(--memo-bg-deep);border:1px solid var(--memo-border);
+  border-left:3px solid var(--memo-accent);border-radius:10px;padding:18px 22px;margin-top:16px;max-width:640px;}
+.resolve .big{font:500 19px/1.3 var(--face-serif);color:var(--memo-ink);}
+.resolve .big b{color:var(--memo-accent);font-style:italic;}
+
+/* ── transcript block ────────────────────────────────── */
+.tcard{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:10px;
+  box-shadow:var(--memo-shadow-1);padding:15px 18px;margin-top:16px;}
+.tcard h4{font:600 10px/1.3 var(--face-mono);text-transform:uppercase;letter-spacing:.13em;
+  color:var(--memo-ink);margin-bottom:2px;}
+.turn{display:grid;grid-template-columns:110px 1fr;gap:14px;padding:11px 0;border-top:1px solid var(--memo-rule);}
+.turn .who{font:600 9.5px/1.45 var(--face-mono);text-transform:uppercase;letter-spacing:.08em;}
+.turn .who.arch{color:var(--memo-accent);}
+.turn .who.build{color:var(--memo-sky);}
+.turn .who small{display:block;color:var(--memo-faint);font-weight:400;letter-spacing:0;
+  text-transform:none;margin-top:3px;}
+.turn .said{font:400 italic 13px/1.6 var(--face-serif);color:var(--memo-text);}
+.turn .said .tok{font-style:normal;font-family:var(--face-mono);font-size:10.5px;color:var(--memo-faint);}
+.turn .spec{font:500 11.5px/1.55 var(--face-mono);color:var(--memo-text);white-space:pre;}
+.turn .spec .tok{color:var(--memo-faint);}
+.turn .out{font:600 12px/1.55 var(--face-mono);}
+.turn .out.ok{color:var(--memo-olive);}
+.turn .out.bad{color:var(--memo-red);}
+.turn .gloss{font:400 11.5px/1.55 var(--face-mono);color:var(--memo-muted);margin-top:5px;}
+
+/* ── tower grid ──────────────────────────────────────── */
+.tower-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.tower-label{font:600 10px/1 var(--face-mono);color:var(--memo-ink);text-transform:uppercase;letter-spacing:.1em;}
+.tower-sub{font:400 10px/1.4 var(--face-mono);color:var(--memo-muted);text-align:center;max-width:140px;}
+.tok-badge{display:inline-flex;gap:6px;font:500 10px/1 var(--face-mono);}
+.tok-badge .nl{color:var(--memo-sky);}
+.tok-badge .k{color:var(--memo-accent);}
+
+/* ── fidelity overlay legend ─────────────────────────── */
+.fid-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;
+  font:400 11px/1 var(--face-mono);color:var(--memo-muted);}
+.fid-legend .item{display:flex;align-items:center;gap:6px;}
+.swatch{width:11px;height:11px;border-radius:2px;flex-shrink:0;}
+
+/* ── reconciliation bar ──────────────────────────────── */
+.recbar{display:flex;height:30px;border-radius:7px;overflow:hidden;
+  border:1px solid var(--memo-border);max-width:560px;}
+.recbar .seg{display:flex;align-items:center;justify-content:center;
+  font:600 10.5px/1 var(--face-mono);color:#fff;min-width:16px;}
+.reclegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;
+  font:400 11px/1 var(--face-mono);color:var(--memo-muted);}
+.reclegend .item{display:flex;align-items:center;gap:6px;}
+.reclegend .sw{width:10px;height:10px;border-radius:2px;}
+.reclegend b{color:var(--memo-ink);}
+
+/* ── token bars (exp3) ───────────────────────────────── */
+.tbars{display:flex;flex-direction:column;gap:10px;max-width:620px;}
+.tbar{display:grid;grid-template-columns:180px 1fr 78px;align-items:center;gap:12px;}
+.tbar .k{font:500 12px/1.3 var(--face-mono);color:var(--memo-ink);}
+.tbar .track{height:20px;background:var(--memo-bg-deep);border-radius:5px;overflow:hidden;}
+.tbar .fill{height:100%;border-radius:5px;}
+.tbar .v{font:600 12px/1 var(--face-mono);text-align:right;font-feature-settings:"tnum";}
+
+/* ── links ───────────────────────────────────────────── */
+.links{display:flex;gap:22px;flex-wrap:wrap;margin-top:30px;font:500 13px/1 var(--face-mono);}
+.links a{border:0;display:inline-flex;align-items:center;gap:5px;}
+.links a::after{content:"\2197";color:var(--memo-faint);}
+
+/* ── scope diagram ───────────────────────────────────── */
+.scope-diagram{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px;max-width:640px;}
+.scope-box{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:10px;
+  box-shadow:var(--memo-shadow-1);padding:14px 16px;}
+.scope-box h4{font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.14em;
+  margin-bottom:10px;}
+.scope-box h4.bad{color:var(--memo-red);}
+.scope-box h4.good{color:var(--memo-olive);}
+.scope-box svg{display:block;width:100%;height:auto;}
+
+/* ── concentric ring viz ─────────────────────────────── */
+#ring-wrap{width:100%;border-radius:12px;overflow:hidden;
+  border:1px solid var(--memo-border);box-shadow:var(--memo-shadow-2);
+  background:var(--memo-card);}
+#ring-wrap svg{display:block;width:100%;height:auto;}
+.ring-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;
+  font:400 10.5px/1 var(--face-mono);color:var(--memo-muted);}
+.ring-legend .item{display:flex;align-items:center;gap:6px;}
+.ring-legend .sw{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+/* ── pareto scatter ──────────────────────────────────── */
+.pareto-wrap{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:12px;
+  box-shadow:var(--memo-shadow-1);padding:16px 18px;max-width:500px;}
+
+/* ── dagre graph ─────────────────────────────────────── */
+.graphwrap{background:var(--memo-card);border:1px solid var(--memo-border);border-radius:12px;
+  box-shadow:var(--memo-shadow-1);padding:8px;max-width:100%;overflow:hidden;}
+.graphwrap svg{display:block;width:100%;height:auto;}
+.graph-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;
+  font:400 10.5px/1 var(--face-mono);color:var(--memo-muted);}
+.graph-legend .item{display:flex;align-items:center;gap:5px;}
+.graph-legend .sw{width:9px;height:9px;border-radius:2px;}
+/* ── arch hand-placed SVG ──────────────────────────── */
+#arch-svg .grp-box{fill:var(--memo-card);stroke-width:1.3;}
+#arch-svg .grp-title{font-family:var(--face-mono);font-size:8px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.12em;}
+#arch-svg .node-rect{rx:4;stroke-width:1.2;}
+#arch-svg .node-circle{stroke-width:1.2;}
+#arch-svg .node-text{font-family:var(--face-mono);font-size:8px;font-weight:500;}
+
+/* ── L1/L2/L3 layer diagram ──────────────────────────── */
+.layer-diagram{display:flex;flex-direction:column;gap:10px;max-width:520px;margin-top:4px;}
+.layer{border-radius:8px;padding:12px 16px;border:1px solid var(--memo-border);}
+.layer.l1{background:color-mix(in srgb,var(--memo-accent) 8%,var(--memo-card));border-left:3px solid var(--memo-accent);}
+.layer.l2{background:color-mix(in srgb,var(--memo-sky) 8%,var(--memo-card));border-left:3px solid var(--memo-sky);}
+.layer.l3{background:color-mix(in srgb,var(--memo-olive) 8%,var(--memo-card));border-left:3px solid var(--memo-olive);}
+.layer .lname{font:700 11px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px;}
+.layer.l1 .lname{color:var(--memo-accent);}
+.layer.l2 .lname{color:var(--memo-sky);}
+.layer.l3 .lname{color:var(--memo-olive);}
+.layer .ldesc{font:400 12.5px/1.55 var(--face-mono);color:var(--memo-text);}
+.layer .ldesc b{color:var(--memo-ink);}
+.layer-arrow{text-align:center;font:600 14px/1 var(--face-mono);color:var(--memo-faint);}
+
+/* ── chrome: nav bar, toggle, hint ──────────────────── */
+.brandtag{position:fixed;top:20px;left:24px;z-index:40;font:600 10.5px/1 var(--face-mono);
+  color:var(--memo-faint);letter-spacing:.2em;text-transform:uppercase;}
+.toggle{position:fixed;top:18px;right:18px;z-index:40;display:inline-flex;
+  background:var(--memo-bg);border:1px solid var(--memo-border);border-radius:999px;
+  padding:3px;box-shadow:var(--memo-shadow-1);}
+.toggle button{background:transparent;border:0;padding:5px 12px;font:600 9.5px/1 var(--face-mono);
+  text-transform:uppercase;letter-spacing:.12em;color:var(--memo-muted);cursor:pointer;border-radius:999px;
+  transition:background var(--motion) var(--ease),color var(--motion) var(--ease);}
+.toggle button.on{background:var(--memo-ink);color:var(--memo-bg);}
+.nav{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:40;
+  display:flex;align-items:center;gap:16px;
+  background:color-mix(in srgb,var(--memo-bg) 88%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--memo-border);border-radius:999px;padding:8px 16px;
+  box-shadow:var(--memo-shadow-1);}
+.nav button{background:transparent;border:0;color:var(--memo-muted);cursor:pointer;
+  font:600 17px/1 var(--face-mono);padding:2px 7px;border-radius:6px;
+  transition:color var(--motion) var(--ease);}
+.nav button:hover{color:var(--memo-ink);}
+.dots{display:flex;gap:7px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--memo-border);cursor:pointer;
+  transition:background var(--motion) var(--ease),transform var(--motion) var(--ease);}
+.dot.on{background:var(--memo-accent);transform:scale(1.4);}
+.counter{font:600 11px/1 var(--face-mono);color:var(--memo-muted);font-feature-settings:"tnum";min-width:42px;text-align:center;}
+.hint{position:fixed;bottom:28px;right:26px;z-index:40;font:500 10px/1 var(--face-mono);
+  color:var(--memo-faint);text-transform:uppercase;letter-spacing:.12em;}
+@media(max-width:820px){.hint{display:none;}.slide{padding:8vh 24px;}}
+@media print{.toggle,.nav,.hint,.brandtag{display:none!important;}}
+</style>
+</head>
+<body>
+<div class="brandtag">research prototype</div>
+<div class="toggle" id="tt">
+  <button data-t="light" class="on">light</button>
+  <button data-t="dark">dark</button>
+</div>
+
+<div class="deck" id="deck">
+
+<!-- ════ SLIDE 0 · COVER ════ -->
+<section class="slide" id="s0">
+  <div class="kicker">case study</div>
+  <h1>The interface is the <em>next instruction</em>.</h1>
+  <p class="lead serif" style="max-width:52ch;">An operator and an AI invent shared shorthand over repeated trials. That shorthand — not prose — is the right primitive for handing work to an agent.</p>
+  <p class="lead" style="margin-top:18px;max-width:60ch;">Three experiments measured it: token cost, structural fidelity under compression, and a live architecture reconstruction. The finding holds at every level.</p>
+  <div class="chips">
+    <span class="chip">HTML · CSS · D3</span>
+    <span class="chip">3 experiments</span>
+  </div>
+</section>
+
+<!-- ════ SLIDE 1 · THE PREMISE ════ -->
+<section class="slide" id="s1">
+  <div class="snum"><b>01</b> / 11 — the premise</div>
+  <h1>Most UI assumes a human is reading.</h1>
+  <p class="lead">When the consumer of your interface is an <b>agent</b>, the screen is not an output to look at — it is the <b>input the model acts on</b>. What you hand the agent determines every next step.</p>
+  <p class="lead">So the honest question becomes: <em>what is the smallest, most reliable way to hand an agent a complex structure?</em> We kept reaching for the wrong noun to describe what we were building.</p>
+  <div class="nouns">
+    <div class="noun"><div class="w">framework</div>
+      <div class="why"><b>tempting:</b> it ships reusable substrate.<span class="no">but there is nothing to build against — you mount your work on it and it watches.</span></div></div>
+    <div class="noun"><div class="w">experiment</div>
+      <div class="why"><b>tempting:</b> it is the running test of a published finding.<span class="no">but it never stops to conclude — the experiment and the workbench are the same surface.</span></div></div>
+    <div class="noun"><div class="w">agent</div>
+      <div class="why"><b>tempting:</b> agents run inside it.<span class="no">but the agents are tenants, not the thing — the thing dispatches them.</span></div></div>
+    <div class="noun"><div class="w">architecture</div>
+      <div class="why"><b>tempting:</b> it has a layered structure.<span class="no">but architecture is the static noun; this one changes shape as you type intent.</span></div></div>
+  </div>
+  <div class="resolve">
+    <p class="big">The real primitive is <b>context</b> — and the question is how to make it dense, exact, and cheap.</p>
+  </div>
+</section>
+
+<!-- ════ SLIDE 2 · SCOPE TO IDEAS ════ -->
+<section class="slide" id="s2">
+  <div class="snum"><b>02</b> / 11 — scope to ideas</div>
+  <div class="row">
+    <div class="col-txt">
+      <h1>Scope the work to an <em>idea</em>, not a directory.</h1>
+      <p class="body">The idea-harness: a path resolves to the <b>idea that owns it</b>. The session inherits that idea's context on resume. Leaving the idea's boundary is an <b>EXCURSION</b> — surfaced inline, not silently mis-attributed.</p>
+      <p class="body mt16">A repo-scoped session leaks everything in: unrelated workstreams, stale context, half-complete ideas competing for the model's attention. The cwd/repo binding silently mis-attributes work and corrupts the compression the kernel depends on.</p>
+      <p class="body mt16">The excursion prompt — "write <code>plan-b/…</code>? outside this idea — <b>allow / re-bind / split</b>" — keeps the context boundary sharp without demanding discipline from the operator.</p>
+    </div>
+    <div class="col-viz">
+      <div id="ring-wrap">
+        <svg id="cv-ring" viewBox="0 0 520 480" role="img" aria-label="concentric ring idea-harness visualization"></svg>
+      </div>
+      <div class="ring-legend mt16" id="ring-legend">
+        <span class="item"><span class="sw" style="background:#B8602A;"></span>L0 root</span>
+        <span class="item"><span class="sw" style="background:#D4793C;"></span>L1 ideas</span>
+        <span class="item"><span class="sw" style="background:#6A8CAF;"></span>L2 workstreams</span>
+        <span class="item"><span class="sw" style="background:#788C5D;"></span>L3 primitives</span>
+      </div>
+      <p class="cap mt16">the idea-harness — the idea (L1) is the unit of inherited context; structure nests outward to primitives.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SLIDE 3 · REFERENCE + METHOD ════ -->
+<section class="slide" id="s3">
+  <div class="snum"><b>03</b> / 11 — reference + method</div>
+  <div class="row">
+    <div class="col-txt">
+      <h1>Fan's architect/builder, run on a human–AI dyad.</h1>
+      <p class="body">In Fan's block-tower studies, two players have <b>asymmetric roles</b>: an architect who sees the target and describes it; a builder who can only act on words. Over repeated trials the language <b>compresses</b> into shared names. Wong et al. 2022 established the qualitative tradeoff — too few names forces re-derivation, too many produces retrieval noise. Our operating window of <b>25–60 primitives</b> is where we found the cost curve bottoms out in practice.</p>
+      <p class="body mt16">Our dyad: operator = architect, Claude session = builder, the substrate = a <b>lexicographer</b> that watches every channel and proposes convergent names. Built and run in a week with Claude Code — agents played every role including building these visuals.</p>
+      <div class="stats">
+        <div class="stat"><div class="v">25–60</div><div class="k">our operating window</div></div>
+        <div class="stat"><div class="v">33</div><div class="k">our kernel — inside the band</div></div>
+      </div>
+    </div>
+    <div class="col-viz">
+      <div class="vizcard">
+        <div class="dcap">library-size <b>U-curve</b> — cost vs. named primitives; our operating window + kernel marker</div>
+        <svg id="cv-ucurve" viewBox="0 0 500 280" role="img"></svg>
+      </div>
+      <div class="vizcard mt20">
+        <div class="dcap">the working loop — <b>architect / builder / lexicographer</b> over a shared ledger</div>
+        <svg viewBox="0 0 580 210" role="img" aria-label="architect builder lexicographer loop">
+          <defs>
+            <marker id="arr-ac" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="var(--memo-accent)"/></marker>
+            <marker id="arr-mu" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="var(--memo-muted)"/></marker>
+          </defs>
+          <!-- return arc -->
+          <path d="M490,38 C490,8 90,8 90,36" fill="none" stroke="var(--memo-accent)" stroke-width="1.5"
+            stroke-dasharray="4 3" marker-end="url(#arr-ac)"/>
+          <text x="290" y="13" text-anchor="middle" font-size="9.5" font-weight="600"
+            fill="var(--memo-accent)" font-family="var(--face-mono)">compresses the next intent &#8635;</text>
+          <!-- boxes -->
+          <rect x="10" y="38" width="160" height="56" rx="7" fill="var(--memo-bg)" stroke="var(--memo-border)"/>
+          <rect x="10" y="38" width="3.5" height="56" rx="2" fill="var(--memo-accent)"/>
+          <text x="24" y="57" font-size="8" font-weight="600" letter-spacing="1.2" fill="var(--memo-accent)" font-family="var(--face-mono)">ARCHITECT</text>
+          <text x="24" y="74" font-size="13" font-weight="600" fill="var(--memo-ink)" font-family="var(--face-serif)">the operator</text>
+          <text x="24" y="88" font-size="9" fill="var(--memo-muted)" font-family="var(--face-mono)">sees target · describes</text>
+          <rect x="210" y="38" width="160" height="56" rx="7" fill="var(--memo-bg)" stroke="var(--memo-border)"/>
+          <rect x="210" y="38" width="3.5" height="56" rx="2" fill="var(--memo-sky)"/>
+          <text x="224" y="57" font-size="8" font-weight="600" letter-spacing="1.2" fill="var(--memo-sky)" font-family="var(--face-mono)">BUILDER</text>
+          <text x="224" y="74" font-size="13" font-weight="600" fill="var(--memo-ink)" font-family="var(--face-serif)">a Claude session</text>
+          <text x="224" y="88" font-size="9" fill="var(--memo-muted)" font-family="var(--face-mono)">acts · writes artifact</text>
+          <rect x="410" y="38" width="160" height="56" rx="7" fill="var(--memo-bg)" stroke="var(--memo-border)"/>
+          <rect x="410" y="38" width="3.5" height="56" rx="2" fill="var(--memo-olive)"/>
+          <text x="424" y="57" font-size="8" font-weight="600" letter-spacing="1.2" fill="var(--memo-olive)" font-family="var(--face-mono)">LEXICOGRAPHER</text>
+          <text x="424" y="74" font-size="13" font-weight="600" fill="var(--memo-ink)" font-family="var(--face-serif)">the substrate</text>
+          <text x="424" y="88" font-size="9" fill="var(--memo-muted)" font-family="var(--face-mono)">proposes names</text>
+          <!-- arrows between -->
+          <line x1="174" y1="66" x2="206" y2="66" stroke="var(--memo-muted)" stroke-width="1.3" marker-end="url(#arr-mu)"/>
+          <text x="190" y="60" text-anchor="middle" font-size="8.5" fill="var(--memo-muted)" font-family="var(--face-mono)">intent</text>
+          <line x1="374" y1="66" x2="406" y2="66" stroke="var(--memo-muted)" stroke-width="1.3" marker-end="url(#arr-mu)"/>
+          <text x="390" y="60" text-anchor="middle" font-size="8.5" fill="var(--memo-muted)" font-family="var(--face-mono)">trace</text>
+          <!-- down connectors -->
+          <line x1="90" y1="94" x2="90" y2="142" stroke="var(--memo-border)" stroke-width="1.1" stroke-dasharray="2 3"/>
+          <line x1="290" y1="94" x2="290" y2="142" stroke="var(--memo-border)" stroke-width="1.1" stroke-dasharray="2 3"/>
+          <line x1="490" y1="94" x2="490" y2="142" stroke="var(--memo-border)" stroke-width="1.1" stroke-dasharray="2 3"/>
+          <!-- ledger rail -->
+          <rect x="10" y="144" width="560" height="40" rx="7" fill="var(--memo-bg-deep)" stroke="var(--memo-border)"/>
+          <text x="290" y="162" text-anchor="middle" font-size="10.5" font-weight="600" letter-spacing="0.8"
+            fill="var(--memo-ink)" font-family="var(--face-mono)">LEDGER · KERNEL</text>
+          <text x="290" y="177" text-anchor="middle" font-size="9" fill="var(--memo-muted)"
+            font-family="var(--face-mono)">the append-only notebook the next session reads · memory the lab dyads never had</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SLIDE 4 · KERNEL + EXP 1 ════ -->
+<section class="slide" id="s4">
+  <div class="snum"><b>04</b> / 11 — experiment 1 · context cost</div>
+  <div class="row">
+    <div class="col-txt">
+      <h1>A name is paid for once, invoked forever.</h1>
+      <p class="body">Named primitives are the compression layer. Experiment 1 measured it: the same 2D block tower described two ways — natural language vs. a shared kernel of named shapes.</p>
+      <p class="body mt16">The kernel costs <b>~9x fewer tokens per object</b> — measured against the fully-explicit prose below, and amortized over reuse: its 216-token definition is repaid by the <b>2nd object</b> (break-even ≈ 1.25), but for a true one-off, plain language is cheaper. Both reconstructions were exact — the compression is lossless.</p>
+      <!-- stack(C,Pi,L) example panel -->
+      <div style="background:var(--memo-bg-deep);border:1px solid var(--memo-border);border-left:3px solid var(--memo-accent);border-radius:10px;padding:16px 18px;margin-top:20px;max-width:520px;">
+        <div style="font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.14em;color:var(--memo-accent);margin-bottom:12px;">what <code style="color:var(--memo-accent);">stack(C,Pi,L)</code> means — and the prose it replaces</div>
+        <div style="font:400 12px/1.55 var(--face-mono);color:var(--memo-text);margin-bottom:10px;">Three named shapes composed bottom-to-top: <code>C(0,0)</code> — rows 0–2, open on the right; <code>Pi(0,3)</code> — rows 3–5, open at the bottom; <code>L(0,6)</code> — rows 6–8. <code>stack</code> composes them in order.</div>
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;">
+          <div style="background:var(--memo-card);border:1px solid var(--memo-border);border-radius:8px;padding:10px 14px;flex:0 0 auto;">
+            <div style="font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--memo-olive);margin-bottom:7px;">kernel — 18 tokens</div>
+            <div style="font:600 14px/1.6 var(--face-mono);color:var(--memo-ink);white-space:pre;"><span style="display:inline-flex;align-items:center;gap:4px;"><span style="background:var(--memo-olive);color:#fff;font-size:9px;padding:2px 6px;border-radius:999px;font-weight:700;letter-spacing:.06em;">18 tok</span></span>
+<code style="color:var(--memo-accent);">C(0,0)  Pi(0,3)  L(0,6)</code></div>
+          </div>
+        </div>
+        <div style="background:var(--memo-card);border:1px solid var(--memo-border);border-radius:8px;padding:10px 14px;">
+          <div style="font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--memo-sky);margin-bottom:7px;display:flex;align-items:center;gap:8px;">the same tower in prose <span style="background:var(--memo-sky);color:#fff;font-size:9px;padding:2px 6px;border-radius:999px;font-weight:700;letter-spacing:.06em;">176 tok</span></div>
+          <div style="font:400 11px/1.58 var(--face-mono);color:var(--memo-muted);background:var(--memo-bg-deep);border-radius:5px;padding:8px 10px;border-left:2px solid var(--memo-sky);">"On a grid with columns 0–2 and rows 0–8, place unit blocks. Rows 0–2: fill column 0 for all three rows; on row 0 also fill columns 1 and 2; on row 2 also fill columns 1 and 2; leave columns 1 and 2 of row 1 empty (open on the right). Rows 3–5: fill column 0 and column 2 for all three rows; on row 5 also fill column 1 (open at the bottom). Rows 6–8: fill column 0 for all three rows; on row 6 also fill columns 1 and 2."</div>
+        </div>
+        <div style="margin-top:10px;font:400 11px/1.5 var(--face-mono);color:var(--memo-faint);font-style:italic;">C, Pi, and L are shapes the author defined once in the kernel.</div>
+      </div>
+    </div>
+    <div class="col-viz">
+      <div class="vizcard">
+        <div class="dcap">cumulative tokens to describe N objects — <b>crossover</b></div>
+        <svg id="cv-crossover" viewBox="0 0 500 300" role="img"></svg>
+      </div>
+      <div class="vizcard mt20">
+        <div class="dcap"><b>tower grids</b> — the actual structures described in each experiment</div>
+        <div id="exp1-grids-slide" style="display:flex;gap:28px;flex-wrap:wrap;justify-content:center;padding:6px 0;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SLIDE 5 · EXP 2 ════ -->
+<section class="slide" id="s5" style="padding-top:7vh;padding-bottom:7vh;">
+  <div class="snum"><b>05</b> / 11 — experiment 2 · brief AND exact <span style="margin-left:8px;padding:1px 8px;border:1px solid var(--memo-border);border-radius:10px;font-size:8.5px;color:var(--memo-muted);text-transform:none;letter-spacing:.02em;">single run · failure-rate unmeasured</span></div>
+  <div class="row" style="align-items:flex-start;">
+    <div class="col-txt">
+      <h1>Prose broke. The kernel didn't.</h1>
+      <p class="body">Push toward irregular structures and the token lead shrinks (8.2x at L1, 1.8x at L3) — incompressible structure forces the kernel back to individual block primitives. In this run, <b>concise prose got it wrong</b> while the symbolic kernel stayed exact.</p>
+      <p class="body mt16">The failure was encoder-side: the architect's prose was wrong before the builder read it. "<mark>col 2 is solid r0–r3</mark>" — column 2 fills r0, r2–r5. Builder faithfully added <code>(2,1)</code>, dropped <code>(2,4)</code>. IoU 0.86.</p>
+      <p class="body mt16">The durable edge is not brevity: <em>a name can't be vague — and, unlike prose, it can be checked.</em> One worked case, not yet a measured rate.</p>
+      <div class="tcard" style="margin-top:12px;">
+        <h4>verbatim · exp 2 L3 — where prose broke</h4>
+        <div class="turn">
+          <div class="who arch">architect<small>prose</small></div>
+          <div class="said"><mark>col 2 is solid r0–r3</mark> <span class="tok">— wrong; col 2 fills r0,r2–r5</span></div>
+        </div>
+        <div class="turn">
+          <div class="who build">builder<small>haiku</small></div>
+          <div class="out bad">✗ missed (2,4) · invented (2,1)(4,5)(4,8)</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-viz">
+      <div class="vizcard">
+        <div class="dcap">tokens vs. structure regularity — <b>ladder</b></div>
+        <svg id="cv-ladder" viewBox="0 0 500 240" role="img"></svg>
+      </div>
+      <div class="vizcard mt20">
+        <div class="dcap">fidelity overlay · <b>L3 irregular</b> — NL vs. kernel reconstruction</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;" id="fidelity-overlay-slide"></div>
+        <div class="fid-legend" id="fid-legend-slide"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SLIDE 6 · EXP 3 ════ -->
+<section class="slide" id="s6" style="padding-top:0;padding-bottom:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;">
+  <div style="flex:0 0 auto;padding:clamp(10px,2vh,22px) clamp(36px,9vw,148px) clamp(8px,1.5vh,16px);">
+    <div class="snum" style="margin-bottom:6px;"><b>06</b> / 11 — experiment 3 · real architecture <span style="margin-left:8px;padding:1px 8px;border:1px solid var(--memo-olive);border-radius:10px;font-size:8.5px;color:var(--memo-olive);text-transform:none;letter-spacing:.02em;">30 builder runs · graph validated</span></div>
+    <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:clamp(12px,2vw,32px);">
+      <h1 style="font-size:clamp(22px,2.4vw,36px);margin-bottom:0;max-width:none;">Now on a real architecture.</h1>
+      <div style="display:flex;align-items:center;gap:clamp(14px,1.5vw,28px);flex-wrap:wrap;">
+        <p class="body" style="max-width:46ch;margin:0;">A real engineering talk rebuilt as a component graph (<b>39 components · 48 relations</b>). Arch span <b>6,616 tok</b> · kernel <b>158</b> encoding (+389 one-time def). Ten Haiku builders rebuilt the graph from each source: kernel scored <b style="color:var(--memo-accent);">0.98</b> edge-F1 (0% failed) vs. prose <b style="color:var(--memo-sky);">0.80</b> vs. raw transcript <b style="color:var(--memo-red);">0.56</b> (<b>40% failed</b>).</p>
+        <div id="tbars-slide" style="display:flex;gap:8px;align-items:center;flex-shrink:0;"></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font:500 10px/1.5 var(--face-mono);color:var(--memo-muted);letter-spacing:.02em;">
+      <span style="color:var(--memo-faint);text-transform:uppercase;letter-spacing:.08em;">encoding 158 tok&nbsp;·&nbsp;</span>
+      <span style="color:var(--memo-faint);">declare 39 (shared)</span> · <b style="color:var(--memo-fg);">OSB</b> 21 · <b style="color:var(--memo-fg);">Sovereign</b> 15 · <b style="color:var(--memo-fg);">CloudFormation</b> 10 · <b style="color:var(--memo-fg);">Packer</b> 8 · <b style="color:var(--memo-fg);">Edge</b> 65 <span style="color:var(--memo-faint);">— five per-service sub-kernels, none over ~65 tok</span>
+    </div>
+  </div>
+  <div style="flex:0 0 auto;padding:0 clamp(36px,9vw,148px) clamp(8px,1.5vh,18px);">
+    <div class="vizcard" style="padding:10px;position:relative;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+        <div class="dcap" style="margin-bottom:0;"><b>architecture component graph</b> — 39 components · 48 relations <span style="color:var(--memo-faint);">(validated vs. diagram + talk)</span> · <a href="https://www.youtube.com/watch?v=55pTFVoclvE" target="_blank" rel="noopener" style="color:var(--memo-accent);border-bottom:1px solid var(--memo-border);font-size:9.5px;text-transform:none;letter-spacing:0;">source ↗</a></div>
+        <span style="font:400 9px/1 var(--face-mono);color:var(--memo-faint);letter-spacing:.06em;text-transform:lowercase;">scroll to zoom · drag to pan</span>
+      </div>
+      <svg id="arch-svg" viewBox="0 0 1200 440" preserveAspectRatio="xMidYMin meet" role="img" aria-label="architecture component graph" style="display:block;width:100%;height:auto;"></svg>
+      <div class="graph-legend" id="arch-legend" style="margin-top:8px;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SLIDE 7 · EXP 1 EXTENDED: TOWERS DETAIL ════ -->
+<!-- repurposed: Slide 7 = Pigeonhole + Pareto -->
+<section class="slide" id="s7">
+  <div class="snum"><b>07</b> / 11 — two rules keep it compressible</div>
+  <div class="row">
+    <div class="col-txt">
+      <h1>Two rules keep it compressible.</h1>
+      <p class="body"><b>PIGEONHOLE</b> — load is the ratio of primitives vs. sibling workstreams, not raw count. When a bucket strains (too many primitives for one idea), split it. The library-size U-curve made operational: you do not optimize globally, you re-cleave locally.</p>
+      <p class="body mt16"><b>PARETO</b> — most agent questions are not scalar. Brevity alone is not enough; exactness alone is too expensive. The kernel is brief AND exact, so it dominates prose on both axes simultaneously. No prose register reaches the non-dominated corner.</p>
+      <p class="body mt16">The scatter is <b>real Experiment-3 data</b>: each point is a builder's median edge-F1 (10 Haiku runs, min–max whiskers) against the tokens to encode the architecture. The kernel sits alone in the non-dominated corner — fewer tokens <em>and</em> higher fidelity than both a concise human summary and the raw transcript.</p>
+    </div>
+    <div class="col-viz">
+      <div class="vizcard">
+        <div class="dcap"><b>pigeonhole</b> — bucket load ratio, then re-cleave</div>
+        <svg id="cv-pigeonhole" viewBox="0 0 500 200" role="img"></svg>
+      </div>
+      <div class="vizcard mt20">
+        <div class="dcap"><b>Pareto frontier</b> · real exp-3 — encoding tokens × edge-F1 (10 runs each, min–max) · kernel dominates</div>
+        <svg id="cv-pareto" viewBox="0 0 500 290" role="img"></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SLIDE 8 · THE LARGER HYPOTHESIS ════ -->
+<section class="slide" id="s8">
+  <div class="snum"><b>08</b> / 11 — the larger hypothesis</div>
+  <div class="row">
+    <div class="col-txt">
+      <h1>Layered named context.</h1>
+      <p class="body">One framework, three levels. <b>L1 ideas</b> are the context unit — what is inherited when a session opens. <b>L2 workstreams</b> have capacity (pigeonhole: split when a bucket strains). <b>L3 primitives</b> are the kernel — measured, lossless, cheap.</p>
+      <p class="body mt16">Selection across layers is multi-objective (Pareto): you want fewer tokens <em>and</em> higher fidelity, simultaneously. The kernel sits on that frontier.</p>
+      <p class="body mt16"><b>Honest frontier:</b> the experiments prove L3 directly. Idea-scoping (L1), pigeonhole (L2), and the Pareto framing are the hypothesis — consistent with the data but not yet separately measured. That is the next round.</p>
+      <div class="vizcard mt20" style="max-width:540px;">
+        <div class="dcap"><b>reconciliation bar</b> — every name resolves to code · zero divergent</div>
+        <div class="recbar" id="recbar-slide"></div>
+        <div class="reclegend" id="reclegend-slide"></div>
+        <p class="cap" style="margin-top:12px;">12 kernel + 21 modifiers = 33 named primitives · inside our 25–60 operating window · zero names say X while the code does Y.</p>
+      </div>
+    </div>
+    <div class="col-viz">
+      <div class="layer-diagram">
+        <div class="layer l1">
+          <div class="lname">L1 · ideas</div>
+          <div class="ldesc"><b>context unit</b> — what a session inherits on open · scoped by path · excursion flag on boundary-cross</div>
+        </div>
+        <div class="layer-arrow">&#8595;</div>
+        <div class="layer l2">
+          <div class="lname">L2 · workstreams</div>
+          <div class="ldesc"><b>capacity-bounded</b> — pigeonhole load = primitives / siblings · split when a bucket strains</div>
+        </div>
+        <div class="layer-arrow">&#8595;</div>
+        <div class="layer l3">
+          <div class="lname">L3 · primitives</div>
+          <div class="ldesc"><b>the kernel</b> — named, lossless, measured · 9x compression · brief AND exact · dominates on Pareto frontier</div>
+        </div>
+        <div class="layer-arrow">&#8595;</div>
+        <div class="layer" style="background:color-mix(in srgb,var(--memo-amber) 8%,var(--memo-card));border-left:3px solid var(--memo-amber);">
+          <div class="lname" style="color:var(--memo-amber);">selection · Pareto</div>
+          <div class="ldesc"><b>multi-objective</b> — brief + exact simultaneously · kernel dominates on both axes at every level</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SLIDE 9 · THE OPERATOR SURFACE (designed payoff) ════ -->
+<section class="slide" id="s-surface" style="overflow:hidden;">
+  <div class="snum"><b>09</b> / 11 — the operator surface</div>
+  <h1 style="font-size:clamp(22px,2.5vw,38px);margin-bottom:8px;max-width:none;">From prose to a named handoff.</h1>
+  <p class="body" style="max-width:70ch;margin-bottom:clamp(12px,2.2vh,26px);">If the interface is the next instruction, the operator shouldn't re-type structure as prose every session. The surface should notice repeated structure, <b>propose a name</b>, and let you hand an agent a <b>primitive</b> instead of a paragraph — with a guard when work strays outside it.</p>
+
+  <div style="display:flex;align-items:stretch;gap:clamp(10px,1.8vw,28px);width:100%;">
+    <!-- BEFORE -->
+    <div style="flex:1 1 0;display:flex;flex-direction:column;gap:7px;min-width:0;">
+      <div style="border:1px solid var(--memo-border);border-radius:12px;overflow:hidden;box-shadow:var(--memo-shadow-1);background:var(--memo-card);">
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--memo-bg-deep);border-bottom:1px solid var(--memo-border);">
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--memo-red);opacity:.45;"></span>
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--memo-amber);opacity:.45;"></span>
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--memo-olive);opacity:.45;"></span>
+          <span style="margin-left:6px;font:500 10px/1 var(--face-mono);color:var(--memo-muted);">claude code — operator</span>
+        </div>
+        <div style="padding:15px 16px 14px;">
+          <div style="font:600 9px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.1em;color:var(--memo-muted);margin-bottom:8px;">give @builder the target ↓</div>
+          <div style="font:400 10.5px/1.55 var(--face-mono);color:var(--memo-muted);background:var(--memo-bg-deep);border:1px solid var(--memo-border);border-radius:7px;padding:10px 12px;">"On a grid with columns 0–2 and rows 0–8, place unit blocks. Rows 0–2: fill column 0 for all three rows; on row 0 also fill columns 1 and 2; on row 2 also fill columns 1 and 2; leave columns 1 and 2 of row 1 empty… <span style="color:var(--memo-faint);">(+148 tokens)</span>"</div>
+          <div style="margin-top:10px;display:inline-block;font:600 9px/1 var(--face-mono);color:var(--memo-red);background:color-mix(in srgb,var(--memo-red) 11%,transparent);border-radius:5px;padding:5px 9px;">176 tok · re-typed every session · prose drifts</div>
+        </div>
+      </div>
+      <div class="dcap" style="text-align:center;margin-bottom:0;">before — context as prose</div>
+    </div>
+
+    <!-- arrow -->
+    <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding-bottom:22px;">
+      <span style="font:700 22px/1 var(--face-serif);color:var(--memo-accent);">→</span>
+      <span style="font:600 8px/1.35 var(--face-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--memo-muted);text-align:center;">mint<br>name<br>hand&nbsp;off</span>
+    </div>
+
+    <!-- AFTER -->
+    <div style="flex:1 1 0;display:flex;flex-direction:column;gap:7px;min-width:0;">
+      <div style="border:1.5px solid var(--memo-accent);border-radius:12px;overflow:hidden;box-shadow:var(--memo-shadow-1);background:var(--memo-card);">
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--memo-bg-deep);border-bottom:1px solid var(--memo-border);">
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--memo-red);opacity:.45;"></span>
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--memo-amber);opacity:.45;"></span>
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--memo-olive);opacity:.45;"></span>
+          <span style="margin-left:6px;font:500 10px/1 var(--face-mono);color:var(--memo-muted);">claude code — operator</span>
+        </div>
+        <div style="padding:13px 16px 14px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:color-mix(in srgb,var(--memo-accent) 7%,transparent);border-left:3px solid var(--memo-accent);border-radius:7px;padding:8px 11px;margin-bottom:12px;">
+            <span style="font:400 10px/1.4 var(--face-mono);color:var(--memo-ink);">seen this structure <b>3×</b> — name it?</span>
+            <code style="font:700 10.5px/1 var(--face-mono);color:#fff;background:var(--memo-accent);padding:4px 8px;border-radius:6px;">stack(C, Pi, L)</code>
+            <span style="font:600 9.5px/1 var(--face-mono);color:var(--memo-olive);border:1px solid var(--memo-olive);border-radius:5px;padding:3px 7px;">Accept ⏎</span>
+            <span style="font:400 9.5px/1 var(--face-mono);color:var(--memo-faint);">dismiss</span>
+          </div>
+          <div style="font:600 9px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.1em;color:var(--memo-muted);margin-bottom:8px;">give @builder the target ↓</div>
+          <div style="display:flex;align-items:center;gap:7px;background:var(--memo-bg-deep);border:1px solid var(--memo-border);border-radius:7px;padding:10px 12px;">
+            <span style="color:var(--memo-accent);font:700 12px/1 var(--face-mono);">›</span>
+            <code style="font:700 12px/1 var(--face-mono);color:var(--memo-accent);background:color-mix(in srgb,var(--memo-accent) 13%,transparent);padding:4px 9px;border-radius:6px;">stack(C, Pi, L)</code>
+            <span style="font:400 10.5px/1 var(--face-mono);color:var(--memo-muted);">→ @builder</span>
+          </div>
+          <div style="margin-top:10px;display:inline-block;font:600 9px/1 var(--face-mono);color:var(--memo-olive);background:color-mix(in srgb,var(--memo-olive) 13%,transparent);border-radius:5px;padding:5px 9px;">18 tok · exact · reusable · named once</div>
+          <div style="margin-top:11px;font:400 9.5px/1.5 var(--face-mono);color:var(--memo-muted);border:1px dashed var(--memo-border);border-radius:7px;padding:8px 11px;">
+            <span style="color:var(--memo-sky);">⤳</span> next step edits <code style="color:var(--memo-ink);">auth-flow</code> — outside <code style="color:var(--memo-accent);">stack</code>. <b style="color:var(--memo-olive);">allow</b> · <b style="color:var(--memo-sky);">re-bind</b> · <b style="color:var(--memo-accent);">split</b>
+          </div>
+        </div>
+      </div>
+      <div class="dcap" style="text-align:center;margin-bottom:0;">after — a named, handoff-able primitive</div>
+    </div>
+  </div>
+
+  <p class="cap mt16" style="max-width:92ch;">Same architecture, two surfaces. The named primitive costs <b>18 tokens vs. 176</b> (slide 4) and hands off at <b>0.98 vs. 0.80</b> reconstruction fidelity (slide 6) — the operator mints structure <em>once</em> and reuses it, instead of re-describing it in prose that drifts. The kernel isn't a syntax to learn; it's what the surface lets you <em>name</em>.</p>
+</section>
+
+<!-- ════ SLIDE 10 · COLOPHON ════ -->
+<section class="slide" id="s9">
+  <div class="snum"><b>10</b> / 11 — colophon</div>
+  <h1>Built in a week, in code, with AI.</h1>
+  <p class="lead" style="max-width:58ch;">3 experiments — a dozen dispatched agents — a locked design system — prototyped entirely in HTML, CSS, and D3 with Claude Code as the collaborator. Every visualization on every slide was built by the same dyad being studied.</p>
+  <p class="lead mt20" style="max-width:58ch;">The substrate ran the experiments the literature describes and made the failures legible. Instrumentation precedes insight; the dyad cannot see what it has not yet agreed to record.</p>
+  <div style="margin-top:36px;display:flex;gap:32px;flex-wrap:wrap;">
+    <div class="stat"><div class="v" style="font-size:clamp(22px,2.4vw,38px);">3</div><div class="k">experiments run</div></div>
+    <div class="stat"><div class="v" style="font-size:clamp(22px,2.4vw,38px);">~9x</div><div class="k">fewer tokens vs. explicit prose</div></div>
+    <div class="stat"><div class="v" style="font-size:clamp(22px,2.4vw,38px);">33</div><div class="k">kernel primitives</div></div>
+    <div class="stat"><div class="v" style="font-size:clamp(22px,2.4vw,38px);">39</div><div class="k">components · exp 3</div></div>
+  </div>
+  <div style="margin-top:20px;max-width:74ch;border:1px solid var(--memo-border);border-left:3px solid var(--memo-faint);border-radius:10px;padding:13px 18px;background:var(--memo-bg-deep);">
+    <div style="font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.14em;color:var(--memo-muted);margin-bottom:12px;">scope &amp; caveats</div>
+    <ul style="margin:0;padding-left:18px;font:400 11.5px/1.55 var(--face-mono);color:var(--memo-muted);">
+      <li><b>Small n, authored stimuli.</b> Exp 1–2 use toy towers the kernel itself authored — so lossless reconstruction is partly true <em>by construction</em>. Exp 3 (a real talk the kernel did <em>not</em> author) is the unrigged test — 30 builder runs against a validated graph.</li>
+      <li><b>Small samples.</b> Token counts are deterministic (<code>tiktoken</code>). Exp 1–2 fidelity came from single, non-deterministic agent runs (a worked case); Exp 3 is 30 runs/condition — a measured failure rate (kernel 0% · prose 0% · transcript 40%) — but still one architecture, one builder model.</li>
+      <li><b>Hypothesis vs. proven.</b> The experiments support L3 (the kernel) directly; idea-scoping (L1), pigeonhole (L2), and the Pareto framing are consistent with the data but not yet separately measured. The 25–60 window is our own operating range, not a literature finding.</li>
+    </ul>
+  </div>
+</section>
+
+</div><!-- .deck -->
+
+<div class="nav" id="nav">
+  <button id="prev" aria-label="previous slide">&larr;</button>
+  <div class="dots" id="dots"></div>
+  <span class="counter" id="counter">1 / 10</span>
+  <button id="next" aria-label="next slide">&rarr;</button>
+</div>
+<div class="hint">&larr; &rarr; to navigate</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────
+   DECK NAVIGATION
+───────────────────────────────────────────────────────── */
+(function(){
+  var deck=document.getElementById("deck");
+  var slides=[].slice.call(deck.querySelectorAll(".slide"));
+  var N=slides.length;
+  var cur=0;
+  var dotsEl=document.getElementById("dots");
+  dotsEl.innerHTML=slides.map(function(_,i){
+    return '<span class="dot'+(i===0?' on':'')+'" data-i="'+i+'"></span>';
+  }).join("");
+
+  function go(i){
+    cur=Math.max(0,Math.min(N-1,i));
+    deck.scrollTo({left:cur*deck.clientWidth,behavior:"smooth"});
+  }
+  function sync(){
+    var i=Math.round(deck.scrollLeft/Math.max(1,deck.clientWidth));
+    if(i!==cur) cur=i;
+    document.getElementById("counter").textContent=(cur+1)+" / "+N;
+    dotsEl.querySelectorAll(".dot").forEach(function(d,j){
+      d.classList.toggle("on",j===cur);
+    });
+  }
+  deck.addEventListener("scroll",function(){window.requestAnimationFrame(sync);},{passive:true});
+  document.getElementById("prev").onclick=function(){go(cur-1);};
+  document.getElementById("next").onclick=function(){go(cur+1);};
+  dotsEl.querySelectorAll(".dot").forEach(function(d){
+    d.onclick=function(){go(+d.dataset.i);};
+  });
+  window.addEventListener("keydown",function(e){
+    if(e.key==="ArrowRight"||e.key==="PageDown"){e.preventDefault();go(cur+1);}
+    if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();go(cur-1);}
+    if(e.key==="Home"){e.preventDefault();go(0);}
+    if(e.key==="End"){e.preventDefault();go(N-1);}
+  });
+  window.addEventListener("resize",function(){
+    deck.scrollTo({left:cur*deck.clientWidth});
+  });
+
+  // Touch/swipe support
+  var touchStartX=0;
+  deck.addEventListener("touchstart",function(e){
+    touchStartX=e.touches[0].clientX;
+  },{passive:true});
+  deck.addEventListener("touchend",function(e){
+    var dx=e.changedTouches[0].clientX-touchStartX;
+    if(Math.abs(dx)>50){go(dx<0?cur+1:cur-1);}
+  },{passive:true});
+})();
+
+/* ─────────────────────────────────────────────────────────
+   PALETTE HELPER
+───────────────────────────────────────────────────────── */
+function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function P(){
+  return {
+    accent:cssv("--memo-accent"),ink:cssv("--memo-ink"),text:cssv("--memo-text"),
+    muted:cssv("--memo-muted"),faint:cssv("--memo-faint"),border:cssv("--memo-border"),
+    rule:cssv("--memo-rule"),card:cssv("--memo-card"),bg:cssv("--memo-bg"),
+    bgDeep:cssv("--memo-bg-deep"),olive:cssv("--memo-olive"),sky:cssv("--memo-sky"),
+    red:cssv("--memo-red"),amber:cssv("--memo-amber"),mono:cssv("--face-mono"),
+    serif:cssv("--face-serif")
+  };
+}
+
+/* ─────────────────────────────────────────────────────────
+   CHART: U-CURVE (slide 3)
+───────────────────────────────────────────────────────── */
+function chartUcurve(){
+  var svg=d3.select("#cv-ucurve");
+  if(!window.d3) return;
+  svg.selectAll("*").remove();
+  var pal=P();
+  var W=500,H=280,m={t:28,r:22,b:48,l:54};
+  var x=d3.scaleLinear().domain([0,84]).range([m.l,W-m.r]);
+  var y=d3.scaleLinear().domain([10,100]).range([H-m.b,m.t]);
+  var xc=42,c0=15;
+  function cost(v){return v<=xc?c0+0.045*Math.pow(v-xc,2):c0+0.040*Math.pow(v-xc,2);}
+
+  // sweet spot band
+  svg.append("rect").attr("x",x(25)).attr("y",m.t)
+    .attr("width",x(60)-x(25)).attr("height",(H-m.b)-m.t)
+    .attr("fill",pal.accent).attr("fill-opacity",0.07);
+
+  var gy=svg.append("g").attr("transform","translate("+m.l+",0)")
+    .call(d3.axisLeft(y).tickValues([15,95]).tickFormat(function(d){return d<50?"low":"high";}));
+  gy.selectAll(".domain").attr("stroke",pal.border);
+  gy.selectAll(".tick line").attr("stroke",pal.rule);
+  gy.selectAll(".tick text").attr("fill",pal.muted).attr("font-family",pal.mono).attr("font-size",10);
+
+  var gx=svg.append("g").attr("transform","translate(0,"+(H-m.b)+")")
+    .call(d3.axisBottom(x).tickValues([0,20,33,40,60,80]).tickSizeOuter(0));
+  gx.selectAll(".domain").attr("stroke",pal.border);
+  gx.selectAll(".tick line").attr("stroke",pal.border);
+  gx.selectAll(".tick text").attr("fill",pal.muted).attr("font-family",pal.mono).attr("font-size",10);
+
+  var pts=d3.range(0,84.1,1).map(function(v){return [v,cost(v)];});
+  svg.append("path").datum(pts).attr("fill","none").attr("stroke",pal.text).attr("stroke-width",2)
+    .attr("d",d3.line().x(function(d){return x(d[0]);}).y(function(d){return y(d[1]);}).curve(d3.curveNatural));
+
+  // sweet spot label
+  svg.append("text").attr("x",(x(25)+x(60))/2).attr("y",m.t+13)
+    .attr("text-anchor","middle").attr("font-size",9.5).attr("font-weight",600)
+    .attr("fill",pal.accent).attr("font-family",pal.mono).text("our window 25–60");
+
+  // kernel marker
+  var cx=x(33), cy=y(cost(33));
+  svg.append("line").attr("x1",cx).attr("x2",cx).attr("y1",cy).attr("y2",H-m.b)
+    .attr("stroke",pal.accent).attr("stroke-width",1.2).attr("stroke-dasharray","3 3");
+  svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",4.5).attr("fill",pal.accent);
+  svg.append("text").attr("x",cx).attr("y",cy-12)
+    .attr("text-anchor","middle").attr("font-size",10.5).attr("font-weight",700)
+    .attr("fill",pal.accent).attr("font-family",pal.mono).text("our kernel = 33");
+
+  // edge labels
+  svg.append("text").attr("x",m.l+4).attr("y",m.t+13)
+    .attr("font-size",9).attr("fill",pal.muted).attr("font-family",pal.mono).text("too few → re-derivation");
+  svg.append("text").attr("x",W-m.r-2).attr("y",m.t+13).attr("text-anchor","end")
+    .attr("font-size",9).attr("fill",pal.muted).attr("font-family",pal.mono).text("too many → retrieval noise");
+
+  // axis titles
+  svg.append("text").attr("x",(m.l+W-m.r)/2).attr("y",H-8)
+    .attr("text-anchor","middle").attr("font-size",9.5).attr("fill",pal.faint)
+    .attr("font-family",pal.mono).text("library size · named primitives");
+  svg.append("text").attr("transform","rotate(-90 14 "+(m.t+H-m.b)/2+")")
+    .attr("x",14).attr("y",(m.t+H-m.b)/2)
+    .attr("text-anchor","middle").attr("font-size",9.5).attr("fill",pal.faint)
+    .attr("font-family",pal.mono).text("description + search cost");
+}
+
+/* ─────────────────────────────────────────────────────────
+   CHART: CROSSOVER (slide 4)
+───────────────────────────────────────────────────────── */
+function chartCrossover(){
+  var svg=d3.select("#cv-crossover");
+  if(!window.d3) return;
+  svg.selectAll("*").remove();
+  var pal=P();
+  var W=500,H=300,m={t:24,r:106,b:48,l:60};
+  var MEAN_NL=194.5, DEF=216, MEAN_K=22, Nmax=20;
+  var x=d3.scaleLinear().domain([0,Nmax]).range([m.l,W-m.r]);
+  var y=d3.scaleLinear().domain([0,MEAN_NL*Nmax]).nice().range([H-m.b,m.t]);
+
+  var gy=svg.append("g").attr("transform","translate("+m.l+",0)")
+    .call(d3.axisLeft(y).ticks(5).tickSize(-(W-m.l-m.r)).tickFormat(d3.format("~s")));
+  gy.selectAll(".domain").remove();
+  gy.selectAll(".tick line").attr("stroke",pal.rule).attr("stroke-dasharray","2 3");
+  gy.selectAll(".tick text").attr("fill",pal.muted).attr("font-family",pal.mono).attr("font-size",10);
+
+  var gx=svg.append("g").attr("transform","translate(0,"+(H-m.b)+")")
+    .call(d3.axisBottom(x).ticks(10).tickSizeOuter(0));
+  gx.selectAll(".domain").attr("stroke",pal.border);
+  gx.selectAll(".tick line").attr("stroke",pal.border);
+  gx.selectAll(".tick text").attr("fill",pal.muted).attr("font-family",pal.mono).attr("font-size",10);
+
+  var line=d3.line().x(function(d){return x(d[0]);}).y(function(d){return y(d[1]);});
+  var nlPts=d3.range(0,Nmax+0.1,0.5).map(function(n){return [n,MEAN_NL*n];});
+  var kPts=d3.range(0,Nmax+0.1,0.5).map(function(n){return [n,DEF+MEAN_K*n];});
+
+  // savings area
+  var Nbe=DEF/(MEAN_NL-MEAN_K);
+  var area=d3.area()
+    .x(function(d){return x(d[0]);})
+    .y0(function(d){return y(DEF+MEAN_K*d[0]);})
+    .y1(function(d){return y(MEAN_NL*d[0]);});
+  var savPts=d3.range(Nbe,Nmax+0.1,0.5).map(function(n){return [n];});
+  svg.append("path").datum(savPts).attr("fill",pal.olive).attr("fill-opacity",0.08).attr("d",area);
+
+  svg.append("path").datum(nlPts).attr("fill","none").attr("stroke",pal.sky).attr("stroke-width",2.4).attr("d",line);
+  svg.append("path").datum(kPts).attr("fill","none").attr("stroke",pal.accent).attr("stroke-width",2.4).attr("d",line);
+
+  // break-even
+  var Ybe=MEAN_NL*Nbe;
+  svg.append("line").attr("x1",x(Nbe)).attr("x2",x(Nbe)).attr("y1",y(Ybe)).attr("y2",H-m.b)
+    .attr("stroke",pal.faint).attr("stroke-dasharray","3 3").attr("stroke-width",1.2);
+  svg.append("circle").attr("cx",x(Nbe)).attr("cy",y(Ybe)).attr("r",4.5).attr("fill",pal.ink);
+  svg.append("text").attr("x",x(Nbe)+7).attr("y",m.t+14)
+    .attr("font-size",10).attr("font-weight",700).attr("fill",pal.ink)
+    .attr("font-family",pal.mono).text("break-even ≈ 1.25");
+
+  // kernel def annotation — offset above the kernel line start, not overlapping
+  var annoY=y(DEF)-14;
+  if(annoY < m.t+6) annoY = y(DEF)+18;
+  svg.append("text").attr("x",m.l+6).attr("y",annoY)
+    .attr("font-size",9).attr("fill",pal.muted).attr("font-family",pal.mono).text("kernel def · 216 tok");
+
+  // end labels
+  var lastNL=nlPts[nlPts.length-1], lastK=kPts[kPts.length-1];
+  svg.append("text").attr("x",x(lastNL[0])+5).attr("y",y(lastNL[1])+4)
+    .attr("font-size",10.5).attr("font-weight",600).attr("fill",pal.sky).attr("font-family",pal.mono).text("natural language");
+  svg.append("text").attr("x",x(lastK[0])+5).attr("y",y(lastK[1])+4)
+    .attr("font-size",10.5).attr("font-weight",600).attr("fill",pal.accent).attr("font-family",pal.mono).text("kernel");
+
+  svg.append("text").attr("x",(m.l+W-m.r)/2).attr("y",H-8)
+    .attr("text-anchor","middle").attr("font-size",9.5).attr("fill",pal.faint)
+    .attr("font-family",pal.mono).text("objects described (N)");
+}
+
+/* ─────────────────────────────────────────────────────────
+   CHART: LADDER (slide 5)
+───────────────────────────────────────────────────────── */
+function chartLadder(){
+  var svg=d3.select("#cv-ladder");
+  if(!window.d3) return;
+  svg.selectAll("*").remove();
+  var pal=P();
+  var W=500,H=240,m={t:38,r:20,b:52,l:54};
+  var levels=[
+    {k:"L1 regular",kn:12,nl:99,ok:true},
+    {k:"L2 semi",kn:26,nl:141,ok:true},
+    {k:"L3 irregular",kn:84,nl:153,ok:false}
+  ];
+  var x0=d3.scaleBand().domain(levels.map(function(d){return d.k;}))
+    .range([m.l,W-m.r]).paddingInner(0.3).paddingOuter(0.15);
+  var x1=d3.scaleBand().domain(["k","nl"]).range([0,x0.bandwidth()]).padding(0.14);
+  var y=d3.scaleLinear().domain([0,165]).nice().range([H-m.b,m.t]);
+
+  var gy=svg.append("g").attr("transform","translate("+m.l+",0)")
+    .call(d3.axisLeft(y).ticks(5).tickSize(-(W-m.l-m.r)));
+  gy.selectAll(".domain").remove();
+  gy.selectAll(".tick line").attr("stroke",pal.rule).attr("stroke-dasharray","2 3");
+  gy.selectAll(".tick text").attr("fill",pal.muted).attr("font-family",pal.mono).attr("font-size",10);
+
+  levels.forEach(function(lv){
+    [["k",lv.kn,pal.accent],["nl",lv.nl,pal.sky]].forEach(function(arr){
+      var key=arr[0], val=arr[1], col=arr[2];
+      svg.append("rect")
+        .attr("x",x0(lv.k)+x1(key)).attr("y",y(val))
+        .attr("width",x1.bandwidth()).attr("height",(H-m.b)-y(val))
+        .attr("fill",col).attr("rx",2).attr("opacity",0.9);
+      svg.append("text")
+        .attr("x",x0(lv.k)+x1(key)+x1.bandwidth()/2).attr("y",y(val)-5)
+        .attr("text-anchor","middle").attr("font-size",10).attr("font-weight",700)
+        .attr("fill",col).attr("font-family",pal.mono).text(val);
+    });
+
+    // ratio label — hardcoded to match prose (8.25→8.2, floor semantics)
+    var ratioLabels={"L1 regular":"8.2","L2 semi":"5.4","L3 irregular":"1.8"};
+    var ratio=ratioLabels[lv.k]||(lv.nl/lv.kn).toFixed(1);
+    svg.append("text")
+      .attr("x",x0(lv.k)+x0.bandwidth()/2).attr("y",m.t-26)
+      .attr("text-anchor","middle").attr("font-size",9.5).attr("fill",pal.muted)
+      .attr("font-family",pal.mono).text(ratio+"x cheaper");
+
+    // fidelity marks
+    svg.append("text")
+      .attr("x",x0(lv.k)+x1("k")+x1.bandwidth()/2).attr("y",m.t-12)
+      .attr("text-anchor","middle").attr("font-size",11).attr("font-weight",700)
+      .attr("fill",pal.olive).attr("font-family",pal.mono).text("✓");
+    svg.append("text")
+      .attr("x",x0(lv.k)+x1("nl")+x1.bandwidth()/2).attr("y",m.t-12)
+      .attr("text-anchor","middle").attr("font-size",11).attr("font-weight",700)
+      .attr("fill",lv.ok?pal.olive:pal.red).attr("font-family",pal.mono).text(lv.ok?"✓":"✗");
+  });
+
+  var gx=svg.append("g").attr("transform","translate(0,"+(H-m.b)+")")
+    .call(d3.axisBottom(x0).tickSizeOuter(0));
+  gx.selectAll(".domain").attr("stroke",pal.border);
+  gx.selectAll(".tick line").attr("stroke",pal.border);
+  gx.selectAll(".tick text").attr("fill",pal.text).attr("font-family",pal.mono).attr("font-size",11).attr("dy","1.2em");
+
+  // legend
+  var lg=svg.append("g").attr("transform","translate("+m.l+","+(H-12)+")");
+  var lx=0;
+  [["kernel",pal.accent],["natural language",pal.sky]].forEach(function(pair){
+    lg.append("rect").attr("x",lx).attr("y",-9).attr("width",11).attr("height",11).attr("rx",2).attr("fill",pair[1]);
+    lg.append("text").attr("x",lx+16).attr("y",0).attr("font-size",10).attr("fill",pal.muted).attr("font-family",pal.mono).text(pair[0]);
+    lx+=16+pair[0].length*6.2+22;
+  });
+
+  svg.append("text").attr("transform","rotate(-90 14 "+(m.t+H-m.b)/2+")")
+    .attr("x",14).attr("y",(m.t+H-m.b)/2)
+    .attr("text-anchor","middle").attr("font-size",9.5).attr("fill",pal.faint)
+    .attr("font-family",pal.mono).text("tokens (o200k)");
+
+  svg.append("text").attr("x",m.l).attr("y",m.t-38)
+    .attr("font-size",9).attr("fill",pal.muted).attr("font-family",pal.mono)
+    .text("fidelity marks above bars: K = kernel  NL = natural language");
+}
+
+/* ─────────────────────────────────────────────────────────
+   TOWER GRID RENDERER
+───────────────────────────────────────────────────────── */
+function drawTower(cells, opts){
+  opts=opts||{};
+  var CELL=opts.cell||16, PAD=opts.pad||3;
+  if(!cells||cells.length===0){
+    var s=document.createElementNS("http://www.w3.org/2000/svg","svg");
+    s.setAttribute("width","40"); s.setAttribute("height","16");
+    return s;
+  }
+  var maxCol=Math.max.apply(null,cells.map(function(c){return c[0];}));
+  var maxRow=Math.max.apply(null,cells.map(function(c){return c[1];}));
+  var cols=maxCol+1, rows=maxRow+1;
+  var W=cols*(CELL+1)+PAD*2, H=rows*(CELL+1)+PAD*2;
+  var pal=P();
+  var s=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  s.setAttribute("viewBox","0 0 "+W+" "+H);
+  s.setAttribute("width",W); s.setAttribute("height",H);
+  s.style.display="block";
+
+  // grid lines
+  for(var c=0;c<=cols;c++){
+    var x=PAD+c*(CELL+1);
+    var gl=document.createElementNS("http://www.w3.org/2000/svg","line");
+    gl.setAttribute("x1",x);gl.setAttribute("x2",x);
+    gl.setAttribute("y1",PAD);gl.setAttribute("y2",H-PAD);
+    gl.setAttribute("stroke",pal.rule);gl.setAttribute("stroke-width","0.5");
+    s.appendChild(gl);
+  }
+  for(var r=0;r<=rows;r++){
+    var y=PAD+r*(CELL+1);
+    var gl2=document.createElementNS("http://www.w3.org/2000/svg","line");
+    gl2.setAttribute("x1",PAD);gl2.setAttribute("x2",W-PAD);
+    gl2.setAttribute("y1",y);gl2.setAttribute("y2",y);
+    gl2.setAttribute("stroke",pal.rule);gl2.setAttribute("stroke-width","0.5");
+    s.appendChild(gl2);
+  }
+
+  var extra=new Set((opts.extra||[]).map(function(c){return c[0]+","+c[1];}));
+  var missing=new Set((opts.missing||[]).map(function(c){return c[0]+","+c[1];}));
+
+  cells.forEach(function(cell){
+    var col=cell[0], row=cell[1];
+    var cx2=PAD+col*(CELL+1)+0.5;
+    var cy2=PAD+(rows-1-row)*(CELL+1)+0.5;
+    var key=col+","+row;
+    var fill=pal.accent, opacity=1;
+
+    if(opts.mode==="nl"){
+      fill=extra.has(key)?pal.red:pal.olive;
+      opacity=extra.has(key)?0.7:0.85;
+    } else if(opts.mode==="kernel"){
+      fill=pal.olive; opacity=0.85;
+    }
+
+    var rect=document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttribute("x",cx2); rect.setAttribute("y",cy2);
+    rect.setAttribute("width",CELL); rect.setAttribute("height",CELL);
+    rect.setAttribute("rx","2"); rect.setAttribute("fill",fill);
+    rect.setAttribute("opacity",opacity);
+    s.appendChild(rect);
+
+    if(opts.mode==="nl"&&extra.has(key)){
+      var t=document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.textContent="✗"; t.setAttribute("x",cx2+CELL/2); t.setAttribute("y",cy2+CELL/2+4);
+      t.setAttribute("text-anchor","middle"); t.setAttribute("font-size","10");
+      t.setAttribute("font-weight","700"); t.setAttribute("fill","#fff");
+      t.setAttribute("font-family","var(--face-mono)");
+      s.appendChild(t);
+    }
+    if(opts.mode==="kernel"){
+      var t2=document.createElementNS("http://www.w3.org/2000/svg","text");
+      t2.textContent="✓"; t2.setAttribute("x",cx2+CELL/2); t2.setAttribute("y",cy2+CELL/2+4);
+      t2.setAttribute("text-anchor","middle"); t2.setAttribute("font-size","9");
+      t2.setAttribute("font-weight","700"); t2.setAttribute("fill","rgba(255,255,255,0.8)");
+      t2.setAttribute("font-family","var(--face-mono)");
+      s.appendChild(t2);
+    }
+  });
+
+  // missing ghost outlines
+  if(opts.mode==="nl"){
+    missing.forEach(function(key){
+      var parts=key.split(",");
+      var col=parseInt(parts[0]), row=parseInt(parts[1]);
+      var cx3=PAD+col*(CELL+1)+0.5;
+      var cy3=PAD+(rows-1-row)*(CELL+1)+0.5;
+      var r=document.createElementNS("http://www.w3.org/2000/svg","rect");
+      r.setAttribute("x",cx3); r.setAttribute("y",cy3);
+      r.setAttribute("width",CELL); r.setAttribute("height",CELL);
+      r.setAttribute("rx","2"); r.setAttribute("fill","none");
+      r.setAttribute("stroke",pal.red); r.setAttribute("stroke-width","1.5");
+      r.setAttribute("stroke-dasharray","3 2");
+      s.appendChild(r);
+    });
+  }
+
+  return s;
+}
+
+function makeTowerWrap(label, sub, cells, kernelSpec, nlTok, kTok, opts){
+  var wrap=document.createElement("div");
+  wrap.className="tower-wrap";
+  var lbl=document.createElement("div");
+  lbl.className="tower-label"; lbl.textContent=label;
+  wrap.appendChild(lbl);
+  if(sub){
+    var s=document.createElement("div");
+    s.className="tower-sub"; s.textContent=sub;
+    wrap.appendChild(s);
+  }
+  wrap.appendChild(drawTower(cells,opts));
+  var badge=document.createElement("div");
+  badge.className="tok-badge";
+  if(nlTok!=null){
+    var n=document.createElement("span"); n.className="nl"; n.textContent="NL "+nlTok;
+    badge.appendChild(n);
+  }
+  if(kTok!=null){
+    var k=document.createElement("span"); k.className="k"; k.textContent="K "+kTok;
+    badge.appendChild(k);
+  }
+  wrap.appendChild(badge);
+  if(kernelSpec){
+    var spec=document.createElement("div");
+    spec.style.cssText="font:400 9.5px/1.45 var(--face-mono);color:var(--memo-muted);white-space:pre;text-align:center;margin-top:2px;";
+    spec.textContent=kernelSpec;
+    wrap.appendChild(spec);
+  }
+  return wrap;
+}
+
+/* ─────────────────────────────────────────────────────────
+   EXP 1 TOWER GRIDS (slide 4)
+───────────────────────────────────────────────────────── */
+var EXP_DATA = {
+  towerA:{cells:[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[1,0],[1,2],[1,5],[1,6],[2,0],[2,2],[2,3],[2,4],[2,5],[2,6]],kernel_spec:"C(0,0)\nPi(0,3)\nL(0,6)",nl_tok:176,kernel_tok:18},
+  towerB:{cells:[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[0,9],[1,0],[1,2],[1,3],[1,5],[1,8],[1,9],[2,0],[2,2],[2,3],[2,5],[2,6],[2,7],[2,8],[2,9]],kernel_spec:"C(0,0)\nC(0,3)\nPi(0,6)\nrow(0,9,3)",nl_tok:213,kernel_tok:26},
+  L3:{
+    cells:[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,2],[1,5],[1,7],[2,0],[2,2],[2,3],[2,4],[2,5],[2,7],[3,5],[3,8],[4,1],[4,4],[4,7],[4,9],[5,0],[5,2],[5,5],[5,8]],
+    nl_result:{cells:[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,2],[1,5],[1,7],[2,0],[2,1],[2,2],[2,3],[2,5],[2,7],[3,5],[3,8],[4,1],[4,4],[4,5],[4,7],[4,8],[4,9],[5,0],[5,2],[5,5],[5,8]],missing:[[2,4]],extra:[[2,1],[4,5],[4,8]]},
+    kernel_spec:"C(0,0)\nPi(0,3)\nblock(4,1)…",kernel_tok:84
+  }
+};
+
+function renderExp1Grids(){
+  var container=document.getElementById("exp1-grids-slide");
+  if(!container) return;
+  container.innerHTML="";
+  container.appendChild(makeTowerWrap("Tower A","stack(C,Pi,L)",EXP_DATA.towerA.cells,EXP_DATA.towerA.kernel_spec,EXP_DATA.towerA.nl_tok,EXP_DATA.towerA.kernel_tok,{cell:18}));
+  container.appendChild(makeTowerWrap("Tower B","stack(C,C,Pi)+cap",EXP_DATA.towerB.cells,EXP_DATA.towerB.kernel_spec,EXP_DATA.towerB.nl_tok,EXP_DATA.towerB.kernel_tok,{cell:18}));
+}
+
+/* ─────────────────────────────────────────────────────────
+   FIDELITY OVERLAY (slide 5)
+───────────────────────────────────────────────────────── */
+function renderFidelityOverlay(){
+  var container=document.getElementById("fidelity-overlay-slide");
+  var legendEl=document.getElementById("fid-legend-slide");
+  if(!container) return;
+  container.innerHTML="";
+  var pal=P();
+  var lv=EXP_DATA.L3;
+  var nlRes=lv.nl_result;
+
+  // NL panel
+  var nlPanel=document.createElement("div");
+  nlPanel.style.cssText="display:flex;flex-direction:column;gap:8px;";
+  var nlTitle=document.createElement("div");
+  nlTitle.style.cssText="font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.1em;color:var(--memo-sky);";
+  nlTitle.textContent="Natural language";
+  nlPanel.appendChild(nlTitle);
+  nlPanel.appendChild(drawTower(nlRes.cells,{cell:13,mode:"nl",missing:nlRes.missing,extra:nlRes.extra}));
+  var nlStat=document.createElement("div");
+  nlStat.style.cssText="font:500 11px/1.5 var(--face-mono);";
+  nlStat.innerHTML='<span style="color:var(--memo-red);font-weight:700;">&#x2717; IoU 0.862</span> · missed 1 · invented 3';
+  nlPanel.appendChild(nlStat);
+  container.appendChild(nlPanel);
+
+  // divider
+  var div=document.createElement("div");
+  div.style.cssText="width:1px;background:var(--memo-rule);align-self:stretch;margin:0 4px;";
+  container.appendChild(div);
+
+  // Kernel panel
+  var kPanel=document.createElement("div");
+  kPanel.style.cssText="display:flex;flex-direction:column;gap:8px;";
+  var kTitle=document.createElement("div");
+  kTitle.style.cssText="font:600 10px/1 var(--face-mono);text-transform:uppercase;letter-spacing:.1em;color:var(--memo-olive);";
+  kTitle.textContent="Kernel";
+  kPanel.appendChild(kTitle);
+  kPanel.appendChild(drawTower(lv.cells,{cell:13,mode:"kernel"}));
+  var kStat=document.createElement("div");
+  kStat.style.cssText="font:500 11px/1.5 var(--face-mono);";
+  kStat.innerHTML='<span style="color:var(--memo-olive);font-weight:700;">&#x2713; exact</span> · IoU 1.000 · 26/26 cells';
+  kPanel.appendChild(kStat);
+  container.appendChild(kPanel);
+
+  // legend
+  if(legendEl){
+    legendEl.innerHTML=[
+      {c:"var(--memo-olive)",op:0.85,t:"correct (kernel)"},
+      {c:"var(--memo-olive)",op:0.85,t:"correct (NL)"},
+      {c:"var(--memo-red)",op:0.7,t:"invented / extra (NL)"},
+      {c:"none",border:"var(--memo-red)",t:"missing — dashed outline"}
+    ].map(function(item){
+      var sw=item.border
+        ? 'background:transparent;border:1.5px dashed '+item.border+';'
+        : 'background:'+item.c+';opacity:'+item.op+';';
+      return '<span class="item"><span class="swatch" style="'+sw+'"></span><span>'+item.t+'</span></span>';
+    }).join("");
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   CONCENTRIC RING VIZ (slide 2)
+───────────────────────────────────────────────────────── */
+function chartRing(){
+  var svg=d3.select("#cv-ring");
+  if(!svg.node()||!window.d3) return;
+  svg.selectAll("*").remove();
+  var pal=P();
+
+  var W=520, H=480, cx=W/2, cy=H/2;
+  var R=[0,62,138,210]; // ring radii: L0(center), L1, L2, L3
+
+  var COLORS={L0:pal.accent, L1:cssv("--memo-accent"), L2:pal.sky, L3:pal.olive};
+  // In light/dark both, pick specific hex so colors remain vivid
+  var COL={L0:"#B8602A", L1:"#D4793C", L2:"#6A8CAF", L3:"#788C5D"};
+
+  /* ── graph data ── */
+  var ideas=[
+    {id:"kernel",      ws:["named-shapes","compression","lossless"]},
+    {id:"experiments", ws:["context-cost","regularity","real-arch"]},
+    {id:"scoping",     ws:["binding","excursion","inherit"]},
+    {id:"framework",   ws:["pigeonhole","pareto","layers"]}
+  ];
+  var wsData={
+    "named-shapes": ["C/Pi/L","stack"],
+    "compression":  ["tokens","break-even"],
+    "lossless":     ["fidelity","IoU"],
+    "context-cost": ["crossover","towers"],
+    "regularity":   ["ladder","L3-break"],
+    "real-arch":    ["transcript","graph"],
+    "binding":      ["path-map","override"],
+    "excursion":    ["detect","surface"],
+    "inherit":      ["context","leak-guard"],
+    "pigeonhole":   ["load-ratio","re-cleave"],
+    "pareto":       ["non-dom","dominated"],
+    "layers":       ["L0-L3","nesting"]
+  };
+
+  /* ── position helpers ── */
+  function pos(angle, r){ return {x:cx+Math.cos(angle)*r, y:cy+Math.sin(angle)*r}; }
+
+  /* ── guide circles ── */
+  var ringNames=["L0 ROOT","L1 IDEAS","L2 WORKSTREAMS","L3 PRIMITIVES"];
+  [1,2,3].forEach(function(i){
+    svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",R[i])
+      .attr("fill","none")
+      .attr("stroke",pal.border).attr("stroke-width",1)
+      .attr("stroke-dasharray","3 4").attr("opacity",0.6);
+    // ring label at top of each circle, slightly offset
+    var labelAngle=-Math.PI/2; // 12 o'clock
+    var lp=pos(labelAngle, R[i]);
+    // L2 ring carries node labels 13px outside it — lift its ring name clear of them
+    var labelDy = (i===2) ? -24 : -7;
+    svg.append("text").attr("x",lp.x).attr("y",lp.y+labelDy)
+      .attr("text-anchor","middle").attr("font-family",pal.mono)
+      .attr("font-size",7.5).attr("font-weight",700)
+      .attr("fill",Object.values(COL)[i]).attr("opacity",0.75)
+      .attr("letter-spacing","0.1em")
+      .text(ringNames[i]);
+  });
+
+  /* ── build node positions ── */
+  var nodes=[]; // {id, layer, x, y, parentId}
+  var edges=[]; // {from:{x,y}, to:{x,y}}
+
+  // Root
+  nodes.push({id:"root",layer:0,x:cx,y:cy,parentId:null});
+
+  // Ideas — evenly spaced on R[1], starting at -π/2 (top)
+  var nIdeas=ideas.length;
+  ideas.forEach(function(idea,i){
+    var angle=-Math.PI/2 + (i/nIdeas)*Math.PI*2;
+    var p=pos(angle,R[1]);
+    nodes.push({id:idea.id,layer:1,x:p.x,y:p.y,parentId:"root",angle:angle});
+    edges.push({fx:cx,fy:cy,tx:p.x,ty:p.y});
+
+    // Workstreams — spread around parent idea's angle on R[2]
+    var nWS=idea.ws.length;
+    idea.ws.forEach(function(wsName,j){
+      var spread=0.32; // radians spread around parent angle
+      var wsAngle=angle + (j-(nWS-1)/2)*spread;
+      var wp=pos(wsAngle,R[2]);
+      nodes.push({id:wsName,layer:2,x:wp.x,y:wp.y,parentId:idea.id,angle:wsAngle});
+      edges.push({fx:p.x,fy:p.y,tx:wp.x,ty:wp.y});
+
+      // Primitives — spread around workstream angle on R[3]
+      var prims=wsData[wsName]||[];
+      var nP=prims.length;
+      prims.forEach(function(primName,k){
+        var pSpread=0.18;
+        var pAngle=wsAngle + (k-(nP-1)/2)*pSpread;
+        var pp=pos(pAngle,R[3]);
+        nodes.push({id:primName,layer:3,x:pp.x,y:pp.y,parentId:wsName});
+        edges.push({fx:wp.x,fy:wp.y,tx:pp.x,ty:pp.y});
+      });
+    });
+  });
+
+  /* ── draw edges ── */
+  edges.forEach(function(e){
+    svg.append("line")
+      .attr("x1",e.fx).attr("y1",e.fy).attr("x2",e.tx).attr("y2",e.ty)
+      .attr("stroke",pal.border).attr("stroke-width",0.8).attr("opacity",0.45);
+  });
+
+  /* ── draw nodes (outer layers first so root draws on top) ── */
+  var nodeR=[11,7,4.5,3];
+  var layerOrder=[3,2,1,0];
+  layerOrder.forEach(function(layer){
+    nodes.filter(function(n){return n.layer===layer;}).forEach(function(n){
+      var col=Object.values(COL)[layer];
+      svg.append("circle").attr("cx",n.x).attr("cy",n.y).attr("r",nodeR[layer])
+        .attr("fill",col).attr("stroke",pal.card).attr("stroke-width",1.2)
+        .attr("opacity",0.9);
+      // Label ideas and root; workstreams and primitives only if room
+      if(layer<=1){
+        var labelText=n.id==="root"?"ROOT":n.id;
+        var dy=layer===0?-15:nodeR[layer]+10;
+        svg.append("text").attr("x",n.x).attr("y",n.y+dy)
+          .attr("text-anchor","middle").attr("font-family",pal.mono)
+          .attr("font-size",layer===0?9:8).attr("font-weight",700)
+          .attr("fill",col).text(labelText);
+      } else if(layer===2){
+        // Workstream label — short, outside node
+        var lp2=pos(n.angle||0, R[2]+13);
+        svg.append("text").attr("x",lp2.x).attr("y",lp2.y+3)
+          .attr("text-anchor","middle").attr("font-family",pal.mono)
+          .attr("font-size",6.5).attr("fill",pal.muted).text(n.id);
+      }
+    });
+  });
+
+  /* ── optional: gentle slow rotation via CSS transform-origin ── */
+  svg.style("transform-origin",cx+"px "+cy+"px");
+}
+
+/* ─────────────────────────────────────────────────────────
+   SCOPE DIAGRAMS (slide 2)
+───────────────────────────────────────────────────────── */
+function drawScopeDiagrams(){
+  if(!window.d3) return;
+  var pal=P();
+
+  // Repo-scoped: everything leaks in
+  (function(){
+    var svg=d3.select("#scope-repo");
+    svg.selectAll("*").remove();
+    var W=240,H=200;
+    // Big outer "repo" container
+    svg.append("rect").attr("x",10).attr("y",10).attr("width",W-20).attr("height",H-20)
+      .attr("rx",8).attr("fill","none").attr("stroke",pal.red).attr("stroke-width",1.5).attr("stroke-dasharray","4 3");
+    svg.append("text").attr("x",W/2).attr("y",28).attr("text-anchor","middle")
+      .attr("font-size",9).attr("fill",pal.red).attr("font-family",pal.mono)
+      .attr("font-weight",600).text("REPO (everything leaks in)");
+
+    // Ideas inside — arranged without overlap, spread to fill container
+    var boxes=[
+      {x:18,y:38,w:92,h:36,label:"idea-A",c:pal.sky},
+      {x:130,y:38,w:92,h:36,label:"idea-B",c:pal.amber},
+      {x:18,y:88,w:92,h:36,label:"idea-C",c:pal.olive},
+      {x:130,y:88,w:92,h:36,label:"stale-X",c:pal.faint}
+    ];
+    boxes.forEach(function(b){
+      svg.append("rect").attr("x",b.x).attr("y",b.y).attr("width",b.w).attr("height",b.h)
+        .attr("rx",5).attr("fill",b.c).attr("fill-opacity",0.15).attr("stroke",b.c).attr("stroke-width",1.2);
+      svg.append("text").attr("x",b.x+b.w/2).attr("y",b.y+b.h/2+4)
+        .attr("text-anchor","middle").attr("font-size",9).attr("fill",b.c)
+        .attr("font-family",pal.mono).attr("font-weight",600).text(b.label);
+    });
+
+    // "leaks" arrows — positioned with padding inside border
+    svg.append("text").attr("x",W/2).attr("y",H-20)
+      .attr("text-anchor","middle").attr("font-size",8.5).attr("fill",pal.muted)
+      .attr("font-family",pal.mono).text("context = everything · boundary = none");
+  })();
+
+  // Idea-scoped: tight context + excursion flag
+  (function(){
+    var svg=d3.select("#scope-idea");
+    svg.selectAll("*").remove();
+    var W=240,H=200;
+
+    // Active idea — prominent
+    svg.append("rect").attr("x",20).attr("y",20).attr("width",W-40).attr("height",100)
+      .attr("rx",8).attr("fill","none").attr("stroke",pal.olive).attr("stroke-width",2);
+    svg.append("text").attr("x",W/2).attr("y",37).attr("text-anchor","middle")
+      .attr("font-size",9).attr("fill",pal.olive).attr("font-family",pal.mono)
+      .attr("font-weight",700).text("ACTIVE IDEA");
+
+    // Workstreams inside
+    [["ws-alpha",40,48,76,36,pal.sky],["ws-beta",126,48,76,36,pal.accent]].forEach(function(b){
+      svg.append("rect").attr("x",b[1]).attr("y",b[2]).attr("width",b[3]).attr("height",b[4])
+        .attr("rx",5).attr("fill",b[5]).attr("fill-opacity",0.13).attr("stroke",b[5]).attr("stroke-width",1);
+      svg.append("text").attr("x",b[1]+b[3]/2).attr("y",b[2]+b[4]/2+4)
+        .attr("text-anchor","middle").attr("font-size",9).attr("fill",b[5])
+        .attr("font-family",pal.mono).attr("font-weight",600).text(b[0]);
+    });
+
+    // Inherited context badge
+    svg.append("rect").attr("x",40).attr("y",92).attr("width",160).attr("height",20)
+      .attr("rx",3).attr("fill",pal.olive).attr("fill-opacity",0.1).attr("stroke",pal.olive).attr("stroke-width",0.8);
+    svg.append("text").attr("x",W/2).attr("y",106).attr("text-anchor","middle")
+      .attr("font-size",8.5).attr("fill",pal.olive).attr("font-family",pal.mono).text("inherits idea context on open");
+
+    // Excursion flag
+    svg.append("rect").attr("x",20).attr("y",136).attr("width",W-40).attr("height",40)
+      .attr("rx",6).attr("fill",pal.amber).attr("fill-opacity",0.12).attr("stroke",pal.amber).attr("stroke-width",1.2).attr("stroke-dasharray","3 2");
+    svg.append("text").attr("x",W/2).attr("y",152).attr("text-anchor","middle")
+      .attr("font-size",8.5).attr("fill",pal.amber).attr("font-family",pal.mono).attr("font-weight",600)
+      .text("EXCURSION DETECTED");
+    svg.append("text").attr("x",W/2).attr("y",166).attr("text-anchor","middle")
+      .attr("font-size",8).attr("fill",pal.muted).attr("font-family",pal.mono)
+      .text("allow / re-bind / split");
+  })();
+}
+
+/* ─────────────────────────────────────────────────────────
+   TOKEN BARS (slide 6) — compact inline pills
+───────────────────────────────────────────────────────── */
+function renderTokenBars(){
+  var el=document.getElementById("tbars-slide");
+  if(!el) return;
+  var rows=[
+    ["full","8,704","var(--memo-faint)"],
+    ["span","6,616","var(--memo-sky)"],
+    ["kernel","547","var(--memo-accent)"]
+  ];
+  el.innerHTML=rows.map(function(r){
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">'
+      +'<span style="font:700 clamp(13px,1.3vw,18px)/1 var(--face-serif);color:'+r[2]+';">'+r[1]+'</span>'
+      +'<span style="font:500 9px/1 var(--face-mono);color:var(--memo-muted);text-transform:uppercase;letter-spacing:.08em;">'+r[0]+'</span>'
+      +'</div>';
+  }).join("");
+}
+
+/* ─────────────────────────────────────────────────────────
+   ARCHITECTURE DIAGRAM — two-row SVG layout (slide 6)
+   viewBox: 1200×440
+   TOP ROW  (y:10 h:210): [OSB x:10 w:300] [Sovereign x:322 w:270] [Edge Flow x:604 w:586]
+   BOTTOM ROW (y:228 h:202): [Packer x:10 w:260] [CloudFormation x:604 w:586]
+   Cross-container arrows (exactly 4):
+     1. OSB → Sovereign   "pull context"     (horizontal, top row)
+     2. Sovereign → Edge  "xDS config"       (horizontal, top row)
+     3. Packer → CFN      "AMI"              (horizontal, bottom row)
+     4. CFN → Envoy       "provisions proxies" (bottom CFN up to top Edge)
+───────────────────────────────────────────────────────── */
+var ARCH_GROUP_COLOR={
+  actor:"--memo-muted",compute:"--memo-accent",data:"--memo-sky",
+  net:"--memo-olive",infra:"--memo-amber",config:"--memo-faint",sidecar:"--memo-red"
+};
+
+function renderArchDiagram(){
+  var svg=d3.select("#arch-svg");
+  var legendEl=document.getElementById("arch-legend");
+  if(!svg.node()||!window.d3) return;
+
+  svg.attr("viewBox","0 0 1200 440");
+
+  svg.selectAll("*").remove();
+  var pal=P();
+
+  /* ── zoom root ── */
+  var g=svg.append("g").attr("class","zoom-root");
+
+  /* ── attach d3.zoom ── */
+  var zoom=d3.zoom().scaleExtent([0.5,4]).on("zoom",function(e){
+    g.attr("transform",e.transform);
+  });
+  svg.call(zoom);
+
+  /* ── arrow markers ── */
+  var defs=svg.append("defs");
+  function mkMarker(id,col,op){
+    var m=defs.append("marker").attr("id",id).attr("viewBox","0 0 8 8")
+      .attr("refX","7").attr("refY","4")
+      .attr("markerWidth","5").attr("markerHeight","5").attr("orient","auto");
+    m.append("path").attr("d","M0,0 L8,4 L0,8 Z")
+      .attr("fill",col).attr("fill-opacity",op||1);
+  }
+  mkMarker("a2-req",pal.accent,0.8);
+  mkMarker("a2-prov",pal.muted,0.65);
+  mkMarker("a2-data",pal.sky,0.8);
+  mkMarker("a2-config",pal.sky,0.85);
+  mkMarker("a2-host",pal.amber,0.75);
+  mkMarker("a2-ref",pal.amber,0.6);
+  mkMarker("a2-cross-ctx",pal.accent,0.9);
+  mkMarker("a2-cross-xds",pal.sky,0.9);
+  mkMarker("a2-cross-ami",pal.amber,0.9);
+  mkMarker("a2-cross-prov",pal.olive,0.9);
+
+  function markerFor(kind){ return "url(#a2-"+(kind||"req")+")"; }
+  function gc(g){ return cssv(ARCH_GROUP_COLOR[g]||"--memo-muted"); }
+
+  /* ── group box: rounded rect + title ── */
+  function grpBox(x,y,w,h,title,colVar){
+    var col=cssv(colVar);
+    g.append("rect").attr("x",x).attr("y",y).attr("width",w).attr("height",h)
+      .attr("rx",9).attr("fill",col).attr("fill-opacity",0.055)
+      .attr("stroke",col).attr("stroke-width",1.4);
+    g.append("text").attr("x",x+10).attr("y",y+14)
+      .attr("font-family",pal.mono).attr("font-size",7.5).attr("font-weight",700)
+      .attr("letter-spacing","0.13em").attr("fill",col).attr("fill-opacity",0.9)
+      .text(title.toUpperCase());
+  }
+
+  /* ── nested sub-group ── */
+  function subBox(x,y,w,h,title,colVar){
+    var col=cssv(colVar);
+    g.append("rect").attr("x",x).attr("y",y).attr("width",w).attr("height",h)
+      .attr("rx",6).attr("fill",col).attr("fill-opacity",0.04)
+      .attr("stroke",col).attr("stroke-width",1).attr("stroke-dasharray","4 3");
+    g.append("text").attr("x",x+7).attr("y",y+11)
+      .attr("font-family",pal.mono).attr("font-size",6.5).attr("font-weight",700)
+      .attr("letter-spacing","0.1em").attr("fill",col).attr("fill-opacity",0.8)
+      .text(title.toUpperCase());
+  }
+
+  /* ── rect node ── */
+  function rNode(x,y,w,h,label,group,sub){
+    var col=gc(group);
+    g.append("rect").attr("x",x).attr("y",y).attr("width",w).attr("height",h)
+      .attr("rx",4).attr("fill",pal.card).attr("stroke",col).attr("stroke-width",1.2);
+    if(sub){
+      g.append("text").attr("x",x+w/2).attr("y",y+h/2-2)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",7.5)
+        .attr("font-weight",500).attr("fill",pal.ink).text(label);
+      g.append("text").attr("x",x+w/2).attr("y",y+h/2+9)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",6)
+        .attr("fill",pal.muted).text(sub);
+    } else {
+      g.append("text").attr("x",x+w/2).attr("y",y+h/2+4)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",7.5)
+        .attr("font-weight",500).attr("fill",pal.ink).text(label);
+    }
+    return {cx:x+w/2, cy:y+h/2, x:x, y:y, w:w, h:h, rx:x+w, lx:x};
+  }
+
+  /* ── circle node ── */
+  function cNode(cx,cy,r,label,group,sub){
+    var col=gc(group);
+    g.append("circle").attr("cx",cx).attr("cy",cy).attr("r",r)
+      .attr("fill",pal.card).attr("stroke",col).attr("stroke-width",1.2);
+    if(sub){
+      g.append("text").attr("x",cx).attr("y",cy-2)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",7.5)
+        .attr("font-weight",500).attr("fill",pal.ink).text(label);
+      g.append("text").attr("x",cx).attr("y",cy+10)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",6)
+        .attr("fill",pal.muted).text(sub);
+    } else {
+      g.append("text").attr("x",cx).attr("y",cy+4)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",7.5)
+        .attr("font-weight",500).attr("fill",pal.ink).text(label);
+    }
+    return {cx:cx, cy:cy};
+  }
+
+  /* ── straight arrow (internal) ── */
+  function arrow(x1,y1,x2,y2,kind,lbl,lblSide){
+    var dash=kind==="prov"?"4 3":kind==="ref"?"3 3":kind==="async"?"2 4":null;
+    var col=kind==="req"?pal.accent:kind==="data"?pal.sky:kind==="config"?pal.sky:
+            kind==="host"?pal.amber:kind==="ref"?pal.amber:pal.muted;
+    g.append("line").attr("x1",x1).attr("y1",y1).attr("x2",x2).attr("y2",y2)
+      .attr("stroke",col).attr("stroke-width",0.9).attr("stroke-opacity",0.7)
+      .attr("stroke-dasharray",dash||null).attr("marker-end",markerFor(kind));
+    if(lbl){
+      var mx=(x1+x2)/2, my=(y1+y2)/2-5;
+      g.append("text").attr("x",mx).attr("y",my)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",6)
+        .attr("fill",col).attr("fill-opacity",0.85).text(lbl);
+    }
+  }
+
+  /* ── cross-container straight arrow with label ── */
+  function crossArrow(x1,y1,x2,y2,markerKind,col,lbl,lblDy){
+    g.append("line").attr("x1",x1).attr("y1",y1).attr("x2",x2).attr("y2",y2)
+      .attr("stroke",col).attr("stroke-width",1.4).attr("stroke-opacity",0.85)
+      .attr("marker-end","url(#a2-"+markerKind+")");
+    if(lbl){
+      var mx=(x1+x2)/2, my=(y1+y2)/2+(lblDy||0);
+      g.append("text").attr("x",mx).attr("y",my)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",7)
+        .attr("font-weight",600).attr("fill",col).attr("fill-opacity",0.9).text(lbl);
+    }
+  }
+
+  /* ── curved cross-container arrow ── */
+  function crossCurve(x1,y1,x2,y2,cpx,cpy,markerKind,col,lbl,lblX,lblY){
+    g.append("path").attr("d","M"+x1+","+y1+" Q"+cpx+","+cpy+" "+x2+","+y2)
+      .attr("fill","none").attr("stroke",col).attr("stroke-width",1.4)
+      .attr("stroke-opacity",0.85).attr("marker-end","url(#a2-"+markerKind+")");
+    if(lbl){
+      g.append("text").attr("x",lblX!=null?lblX:(x1+x2)/2).attr("y",lblY!=null?lblY:(y1+y2)/2)
+        .attr("text-anchor","middle").attr("font-family",pal.mono).attr("font-size",7)
+        .attr("font-weight",600).attr("fill",col).attr("fill-opacity",0.9).text(lbl);
+    }
+  }
+
+  /* ════════════════════════════════════════════════════════
+     TOP ROW  y=10 h=210
+     1. OSB          x=10  w=300
+     2. Sovereign    x=322 w=270
+     3. Edge Flow    x=604 w=586
+  ════════════════════════════════════════════════════════ */
+
+  /* ── 1. OSB (x:10 y:10 w:300 h:210) ── */
+  grpBox(10,10,300,210,"Open Service Broker","--memo-accent");
+
+  // client circle at left, OSB rect alongside
+  var nClient =cNode(46,52,14,"client","actor","dev");
+  var nOSB    =rNode(72,42,110,22,"OSB (FastAPI)","compute");
+  var nSQS    =rNode(120,86,68,20,"SQS","data");
+  var nWorker =rNode(105,124,80,22,"worker","compute");
+  var nDynamo =rNode(105,166,80,22,"DynamoDB","data");
+
+  // Provisioning Task nested sub-group
+  subBox(200,90,100,116,"Prov. Task","--memo-faint");
+  var nR53osb =rNode(208,104,84,20,"Route 53","infra");
+  var nCFosb  =rNode(208,140,84,20,"CloudFront","net");
+
+  // internal arrows
+  arrow(nClient.cx+14,nClient.cy,nOSB.x,nOSB.cy,"req");
+  arrow(nOSB.cx,nOSB.cy+11,nSQS.cx,nSQS.cy-10,"async","drop task");
+  arrow(nSQS.cx,nSQS.cy+10,nWorker.cx,nWorker.cy-11,"req");
+  arrow(nWorker.cx,nWorker.cy+11,nDynamo.cx,nDynamo.cy-11,"data");
+  arrow(nWorker.cx+40,nWorker.cy,nR53osb.x,nR53osb.cy,"prov");
+  arrow(nWorker.cx+40,nWorker.cy+6,nCFosb.x,nCFosb.cy,"prov");
+
+  /* ── 2. Sovereign / Config (x:322 y:10 w:270 h:210) ── */
+  grpBox(322,10,270,210,"Sovereign / Configuration","--memo-sky");
+
+  var nSovereign=rNode(336,38,160,22,"Sovereign (FastAPI ctrl)","compute");
+  var nTemplates=rNode(336,82,72,20,"templates","config");
+  var nContext  =rNode(336,116,72,20,"context","config");
+  var nS3       =rNode(336,152,72,20,"S3","data");
+  var nClusters =rNode(424,82,74,20,"Clusters","config");
+  var nRoutes   =rNode(424,116,74,20,"Routes","config");
+  var nListeners=rNode(424,152,74,20,"Listeners","config");
+
+  // internal arrows
+  arrow(nTemplates.cx+36,nTemplates.cy,nSovereign.cx+40,nSovereign.cy+11,"config");
+  arrow(nContext.cx+36,nContext.cy,nSovereign.cx+40,nSovereign.cy+11,"config");
+  arrow(nS3.cx,nS3.cy-10,nContext.cx,nContext.cy+10,"data");
+  arrow(nSovereign.cx,nSovereign.cy+11,nClusters.cx-37,nClusters.cy-10,"config");
+  arrow(nClusters.cx,nClusters.cy+10,nRoutes.cx,nRoutes.cy-10,"config");
+  arrow(nRoutes.cx,nRoutes.cy+10,nListeners.cx,nListeners.cy-10,"config");
+
+  /* ── 3. Edge Flow (x:604 y:10 w:586 h:210) ── */
+  grpBox(604,10,586,210,"Edge Flow","--memo-olive");
+
+  var nCustomer=cNode(640,46,15,"customer","actor");
+  var nNLBedge =rNode(622,74,76,22,"NLB / ALB","net");
+  var nEnvoy   =cNode(660,132,20,"Envoy","net","×2000 / 13 regions");
+  var nBackend =rNode(618,190,96,22,"Backend Service","actor");
+
+  // sidecars cluster — right of Envoy
+  var nAuthSC  =rNode(700,95,72,19,"auth sidecar","sidecar");
+  var nAuthzSC =rNode(700,121,72,19,"authz sidecar","sidecar");
+  var nRLSC    =rNode(700,147,72,19,"rate-limit","sidecar");
+
+  // products — further right
+  var nJira    =rNode(796,73,80,19,"Jira","actor");
+  var nConf    =rNode(796,99,80,19,"Confluence","actor");
+  var nBB      =rNode(796,125,80,19,"Bitbucket","actor");
+  var nSP      =rNode(796,151,80,19,"Status Page","actor");
+
+  // internal arrows
+  arrow(nCustomer.cx,nCustomer.cy+15,nNLBedge.cx,nNLBedge.cy-11,"req");
+  arrow(nNLBedge.cx,nNLBedge.cy+11,nEnvoy.cx,nEnvoy.cy-20,"req");
+  arrow(nEnvoy.cx-12,nEnvoy.cy+18,nBackend.cx+30,nBackend.cy-11,"req");
+  arrow(nEnvoy.cx+20,nEnvoy.cy-6,nAuthSC.x,nAuthSC.cy,"req");
+  arrow(nEnvoy.cx+20,nEnvoy.cy,nAuthzSC.x,nAuthzSC.cy,"req");
+  arrow(nEnvoy.cx+20,nEnvoy.cy+6,nRLSC.x,nRLSC.cy,"req");
+  arrow(nAuthSC.rx,nAuthSC.cy,nJira.x,nJira.cy,"req");
+  arrow(nAuthzSC.rx,nAuthzSC.cy,nConf.x,nConf.cy,"req");
+  arrow(nRLSC.rx,nRLSC.cy,nBB.x,nBB.cy,"req");
+  // Status Page direct from Envoy products zone
+  arrow(nAuthSC.rx,nAuthSC.cy+4,nSP.x,nSP.cy,"req");
+
+  /* ════════════════════════════════════════════════════════
+     BOTTOM ROW  y=228 h=202
+     4. Packer          x=10  w=260
+     5. CloudFormation  x=604 w=586
+  ════════════════════════════════════════════════════════ */
+
+  /* ── 4. Packer (x:10 y:228 w:260 h:202) ── */
+  grpBox(10,228,260,202,"HashiCorp Packer","--memo-faint");
+
+  var nSalt  =rNode(24,258,90,22,"SaltStack cfg","config");
+  var nPkr   =rNode(152,258,80,22,"Packer","config");
+  var nAMIpk =rNode(88,316,80,22,"AMI","infra");
+
+  // internal arrows
+  arrow(nSalt.rx,nSalt.cy,nPkr.x,nPkr.cy,"config");
+  arrow(nPkr.cx,nPkr.cy+11,nAMIpk.cx+20,nAMIpk.cy-11,"prov");
+
+  /* ── 5. CloudFormation (x:604 y:228 w:586 h:202) ── */
+  grpBox(604,228,586,202,"AWS CloudFormation","--memo-amber");
+
+  var nCFN   =rNode(620,248,96,22,"CloudFormation","infra");
+  // resources — two columns to the right
+  var nVPC   =rNode(738,234,56,19,"VPC","infra");
+  var nSubnet=rNode(738,258,56,19,"Subnet","infra");
+  var nIGW   =rNode(738,282,56,19,"IGW","infra");
+  var nASG   =rNode(738,306,56,19,"AutoScaling","infra");
+  var nEC2   =rNode(738,330,56,19,"EC2","infra");
+  var nSG    =rNode(808,234,60,19,"Sec Group","infra");
+  var nIAM   =rNode(808,258,60,19,"IAM Role","infra");
+  var nKP    =rNode(808,282,60,19,"KeyPair","infra");
+  var nNLBcfn=rNode(808,306,60,19,"NLB","net");
+  var nACM   =rNode(808,330,60,19,"ACM","infra");
+  var nR53cfn=rNode(620,306,80,19,"Route 53","infra");
+  var nAMIcfn=rNode(620,350,80,19,"AMI (ref)","infra");
+
+  // internal arrows — CFN → resources (fan out from right edge of CFN box)
+  var cfnRx=nCFN.rx, cfnCy=nCFN.cy;
+  [nVPC,nSubnet,nIGW,nASG,nSG,nIAM,nKP,nNLBcfn,nACM].forEach(function(n){
+    arrow(cfnRx,cfnCy,n.x,n.cy,"prov");
+  });
+  arrow(cfnRx,cfnCy,nR53cfn.x,nR53cfn.cy,"prov");
+  arrow(nCFN.cx,nCFN.cy+11,nAMIcfn.cx,nAMIcfn.cy-10,"ref");
+  arrow(nASG.cx,nASG.cy+10,nEC2.cx,nEC2.cy-10,"prov");
+
+  /* ════════════════════════════════════════════════════════
+     CROSS-CONTAINER ARROWS — exactly 4, short & non-crossing
+  ════════════════════════════════════════════════════════ */
+
+  // ① OSB → Sovereign : "pull context"
+  //   Right edge of OSB (x=310) → Left of Sovereign (x=322), midpoint of top row ~115
+  crossArrow(310,115,322,115,"cross-ctx",pal.accent,"pull context",-8);
+
+  // ② Sovereign → Edge Flow : "xDS config"
+  //   Right edge of Sovereign (x=592) → left of Edge Flow (x=604), at listener row height
+  crossArrow(592,130,604,130,"cross-xds",pal.sky,"xDS config",-8);
+
+  // ③ Packer → CloudFormation : "AMI"
+  //   Right edge of Packer (x=270) → left of CFN group (x=604); route via bottom-row midpoint
+  crossCurve(
+    270, nAMIpk.cy,        // from Packer AMI right edge
+    604, nAMIcfn.cy,        // to CFN AMI left edge
+    437, nAMIpk.cy,         // control point — straight middle
+    "cross-ami", pal.amber,
+    "AMI", 437, nAMIpk.cy-10
+  );
+
+  // ④ CloudFormation → Envoy : "provisions proxies"
+  //   From top of NLB node in CFN (bottom row) up to Envoy in Edge Flow (top row)
+  //   NLBcfn top at y=306; Envoy bottom at y=132+20=152
+  //   Use a gentle curve through the inter-row gap at y=222
+  crossCurve(
+    nNLBcfn.cx, nNLBcfn.y,   // top of NLB in CFN
+    nEnvoy.cx,  nEnvoy.cy+20, // bottom of Envoy circle
+    838, 210,                  // control: right side mid-height (stays in gap between rows)
+    "cross-prov", pal.olive,
+    "provisions proxies", 790, 208
+  );
+
+  /* ── Legend ── */
+  if(legendEl){
+    var grps=["actor","compute","data","net","infra","config","sidecar"];
+    legendEl.innerHTML=grps.map(function(g){
+      var col=cssv(ARCH_GROUP_COLOR[g]||"--memo-muted");
+      return '<span class="item"><span class="sw" style="background:'+col+'"></span>'+g+'</span>';
+    }).join("");
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   PIGEONHOLE DIAGRAM (slide 7)
+───────────────────────────────────────────────────────── */
+function chartPigeonhole(){
+  var svg=d3.select("#cv-pigeonhole");
+  if(!window.d3) return;
+  svg.selectAll("*").remove();
+  var pal=P();
+  var W=500,H=200;
+
+  // Left: straining bucket
+  var bx=50, by=30, bw=120, bh=120;
+  svg.append("rect").attr("x",bx).attr("y",by).attr("width",bw).attr("height",bh)
+    .attr("rx",6).attr("fill","none").attr("stroke",pal.red).attr("stroke-width",2);
+  svg.append("text").attr("x",bx+bw/2).attr("y",by-8).attr("text-anchor","middle")
+    .attr("font-size",9.5).attr("fill",pal.red).attr("font-family",pal.mono)
+    .attr("font-weight",600).text("STRAINING BUCKET");
+
+  // Items crammed in — use short labels so each fits its box
+  ["p1","p2","p3","p4","p5","p6","p7","p8"].forEach(function(lbl,i){
+    var row=Math.floor(i/4), col=i%4;
+    var ix=bx+6+col*27, iy=by+14+row*50;
+    svg.append("rect").attr("x",ix).attr("y",iy).attr("width",22).attr("height",20)
+      .attr("rx",3).attr("fill",pal.red).attr("fill-opacity",0.15).attr("stroke",pal.red).attr("stroke-width",0.8);
+    svg.append("text").attr("x",ix+11).attr("y",iy+13).attr("text-anchor","middle")
+      .attr("font-size",8.5).attr("fill",pal.red).attr("font-family",pal.mono).text(lbl);
+  });
+
+  // Arrow
+  svg.append("text").attr("x",210).attr("y",100).attr("text-anchor","middle")
+    .attr("font-size",20).attr("fill",pal.muted).attr("font-family",pal.mono).text("→");
+  svg.append("text").attr("x",210).attr("y",115).attr("text-anchor","middle")
+    .attr("font-size",9).attr("fill",pal.muted).attr("font-family",pal.mono).text("re-cleave");
+
+  // Right: two smaller buckets
+  var rb1x=240, rb2x=360, rby=30, rbw=100, rbh=120;
+  [rb1x,rb2x].forEach(function(rx,idx){
+    svg.append("rect").attr("x",rx).attr("y",rby).attr("width",rbw).attr("height",rbh)
+      .attr("rx",6).attr("fill","none").attr("stroke",pal.olive).attr("stroke-width",1.5);
+    svg.append("text").attr("x",rx+rbw/2).attr("y",rby-8).attr("text-anchor","middle")
+      .attr("font-size",9).attr("fill",pal.olive).attr("font-family",pal.mono)
+      .attr("font-weight",600).text(idx===0?"idea-A":"idea-B");
+
+    var items=idx===0?["p01","p02","p03","p04"]:["p05","p06","p07","p08"];
+    items.forEach(function(lbl,i){
+      var row=Math.floor(i/2), col=i%2;
+      var ix=rx+8+col*46, iy=rby+10+row*52;
+      svg.append("rect").attr("x",ix).attr("y",iy).attr("width",38).attr("height",20)
+        .attr("rx",3).attr("fill",pal.olive).attr("fill-opacity",0.13).attr("stroke",pal.olive).attr("stroke-width",0.8);
+      svg.append("text").attr("x",ix+19).attr("y",iy+13).attr("text-anchor","middle")
+        .attr("font-size",7.5).attr("fill",pal.olive).attr("font-family",pal.mono).text(lbl);
+    });
+  });
+
+  // Caption
+  svg.append("text").attr("x",W/2).attr("y",H-8).attr("text-anchor","middle")
+    .attr("font-size",9).attr("fill",pal.muted).attr("font-family",pal.mono)
+    .text("load = primitives / sibling workstreams · split when a bucket strains");
+}
+
+/* ─────────────────────────────────────────────────────────
+   PARETO SCATTER (slide 7)
+───────────────────────────────────────────────────────── */
+function chartPareto(){
+  var svg=d3.select("#cv-pareto");
+  if(!window.d3) return;
+  svg.selectAll("*").remove();
+  var pal=P();
+  var W=500,H=290,m={t:26,r:26,b:74,l:56};
+
+  // REAL experiment-3 data: edge-F1 over 10 Haiku runs/condition vs. encoding tokens.
+  // fid = median; lo/hi = min/max across the 10 runs.
+  var pts=[
+    {lbl:"transcript",tok:6616,fid:0.557,lo:0.434,hi:0.713,note:"40% failed",col:pal.red},
+    {lbl:"prose",     tok:298, fid:0.800,lo:0.600,hi:0.839,note:"0% failed", col:pal.sky},
+    {lbl:"kernel",    tok:158, fid:0.979,lo:0.923,hi:0.989,note:"0% failed", col:pal.accent}
+  ];
+
+  var x=d3.scaleLog().domain([120,9000]).range([m.l,W-m.r]);
+  var y=d3.scaleLinear().domain([0.4,1.04]).range([H-m.b,m.t]);
+
+  var gy=svg.append("g").attr("transform","translate("+m.l+",0)")
+    .call(d3.axisLeft(y).tickValues([0.4,0.5,0.6,0.7,0.8,0.9,1.0]).tickFormat(function(d){return (d*100).toFixed(0)+"%";}));
+  gy.selectAll(".domain").attr("stroke",pal.border);
+  gy.selectAll(".tick line").attr("stroke",pal.rule).attr("stroke-dasharray","2 3");
+  gy.selectAll(".tick text").attr("fill",pal.muted).attr("font-family",pal.mono).attr("font-size",9.5);
+
+  var gx=svg.append("g").attr("transform","translate(0,"+(H-m.b)+")")
+    .call(d3.axisBottom(x).tickValues([158,298,1000,6616]).tickFormat(function(d){return d3.format(",")(d);}));
+  gx.selectAll(".domain").attr("stroke",pal.border);
+  gx.selectAll(".tick line").attr("stroke",pal.border);
+  gx.selectAll(".tick text").attr("fill",pal.muted).attr("font-family",pal.mono).attr("font-size",9.5);
+
+  // Dominated region: right of the kernel AND below it — kernel beats everything here.
+  var kp=pts[2];
+  svg.append("rect").attr("x",x(kp.tok)).attr("y",y(kp.fid))
+    .attr("width",(W-m.r)-x(kp.tok)).attr("height",(H-m.b)-y(kp.fid))
+    .attr("fill",pal.accent).attr("fill-opacity",0.06);
+  svg.append("text").attr("x",(x(kp.tok)+(W-m.r))/2).attr("y",y(0.45))
+    .attr("text-anchor","middle").attr("font-size",8).attr("fill",pal.faint)
+    .attr("font-family",pal.mono).text("kernel dominates — fewer tokens AND higher fidelity");
+
+  // Error bars (min–max) + points
+  pts.forEach(function(d){
+    svg.append("line").attr("x1",x(d.tok)).attr("x2",x(d.tok)).attr("y1",y(d.lo)).attr("y2",y(d.hi))
+      .attr("stroke",d.col).attr("stroke-width",1.5).attr("stroke-opacity",0.55);
+    [d.lo,d.hi].forEach(function(v){
+      svg.append("line").attr("x1",x(d.tok)-4).attr("x2",x(d.tok)+4).attr("y1",y(v)).attr("y2",y(v))
+        .attr("stroke",d.col).attr("stroke-width",1.5).attr("stroke-opacity",0.55);
+    });
+    svg.append("circle").attr("cx",x(d.tok)).attr("cy",y(d.fid)).attr("r",6)
+      .attr("fill",d.col).attr("stroke",pal.card).attr("stroke-width",1.5);
+  });
+
+  // Labels: kernel & prose to the right of their points; transcript to the left (it's at the right edge)
+  var off={kernel:{dx:11,dy:-9,a:"start"}, prose:{dx:11,dy:-9,a:"start"}, transcript:{dx:-11,dy:-9,a:"end"}};
+  pts.forEach(function(d){
+    var o=off[d.lbl];
+    svg.append("text").attr("x",x(d.tok)+o.dx).attr("y",y(d.fid)+o.dy)
+      .attr("text-anchor",o.a).attr("font-size",10).attr("font-weight",700)
+      .attr("fill",d.col).attr("font-family",pal.mono).text(d.lbl+" "+(d.fid*100).toFixed(0)+"%");
+    svg.append("text").attr("x",x(d.tok)+o.dx).attr("y",y(d.fid)+o.dy+11)
+      .attr("text-anchor",o.a).attr("font-size",8).attr("fill",pal.muted)
+      .attr("font-family",pal.mono).text(d3.format(",")(d.tok)+" tok · "+d.note);
+  });
+
+  // Axis titles
+  svg.append("text").attr("x",(m.l+W-m.r)/2).attr("y",H-m.b+34)
+    .attr("text-anchor","middle").attr("font-size",9.5).attr("fill",pal.faint)
+    .attr("font-family",pal.mono).text("encoding tokens · log (lower = better)");
+  svg.append("text").attr("transform","rotate(-90 13 "+(m.t+H-m.b)/2+")")
+    .attr("x",13).attr("y",(m.t+H-m.b)/2)
+    .attr("text-anchor","middle").attr("font-size",9.5).attr("fill",pal.faint)
+    .attr("font-family",pal.mono).text("edge-F1 fidelity (higher = better)");
+
+  // Legend
+  var lg=svg.append("g").attr("transform","translate("+(m.l+6)+","+(H-m.b+52)+")");
+  var lx=0;
+  [["kernel",pal.accent],["prose",pal.sky],["transcript",pal.red]].forEach(function(pair){
+    lg.append("circle").attr("cx",lx+5).attr("cy",-5).attr("r",4).attr("fill",pair[1]);
+    lg.append("text").attr("x",lx+13).attr("y",-1.5).attr("font-size",9).attr("fill",pal.muted).attr("font-family",pal.mono).text(pair[0]);
+    lx+=13+pair[0].length*6.0+20;
+  });
+}
+
+/* ─────────────────────────────────────────────────────────
+   RECONCILIATION BAR (slide 8)
+───────────────────────────────────────────────────────── */
+function renderRecon(){
+  var recon=[
+    {k:"aligned",n:25,c:"var(--memo-olive)"},
+    {k:"name-ahead",n:15,c:"var(--memo-sky)"},
+    {k:"code-ahead",n:25,c:"var(--memo-accent)"},
+    {k:"divergent",n:0,c:"var(--memo-red)"},
+    {k:"orphan",n:0,c:"var(--memo-faint)"}
+  ];
+  var total=recon.reduce(function(s,d){return s+d.n;},0)||1;
+  var bar=document.getElementById("recbar-slide");
+  var leg=document.getElementById("reclegend-slide");
+  if(!bar) return;
+  bar.innerHTML=recon.filter(function(d){return d.n>0;}).map(function(d){
+    return '<div class="seg" style="flex:'+(d.n/total)+';background:'+d.c+';">'+d.n+'</div>';
+  }).join("");
+  if(leg){
+    leg.innerHTML=recon.map(function(d){
+      return '<span class="item"><span class="sw" style="background:'+d.c+'"></span>'
+        +'<b>'+d.n+'</b> '+d.k+'</span>';
+    }).join("");
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   MASTER RENDER + THEME
+───────────────────────────────────────────────────────── */
+function renderAll(){
+  chartUcurve();
+  chartCrossover();
+  chartLadder();
+  chartPigeonhole();
+  chartPareto();
+  chartRing();
+  drawScopeDiagrams();
+  renderExp1Grids();
+  renderFidelityOverlay();
+  renderTokenBars();
+  renderRecon();
+  renderArchDiagram();
+}
+
+(function(){
+  var root=document.documentElement;
+  var key="casestudy-theme";
+  var tt=document.getElementById("tt");
+  function set(t){
+    root.setAttribute("data-theme",t);
+    tt.querySelectorAll("button").forEach(function(b){
+      b.classList.toggle("on",b.dataset.t===t);
+    });
+    localStorage.setItem(key,t);
+    renderAll();
+  }
+  var saved=localStorage.getItem(key);
+  if(saved){set(saved);}else{renderAll();}
+  tt.addEventListener("click",function(e){
+    var b=e.target.closest("button");
+    if(b) set(b.dataset.t);
+  });
+})();
+</script>
+
+</body>
+</html>
